@@ -1,0 +1,59 @@
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ring {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.ringTrack {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--color-accent) calc(var(--progress, 0) * 1%),
+    var(--color-border) 0
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 1s linear;
+}
+
+.ringInner {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.countdown {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.packCount {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.ready {
+  animation: pulse-ring 1s ease-in-out infinite;
+}

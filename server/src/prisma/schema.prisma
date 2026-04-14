@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Auth tier
+  isGuest      Boolean @default(true)
+  guestToken   String? @unique
+  email        String? @unique
+  passwordHash String?
+  emailVerified Boolean @default(false)
+
+  // Profile
+  username  String? @unique
+  avatarUrl String?
+  coins     Int     @default(100)
+  rating    Int     @default(1000)
+
+  // Relations
+  oauthAccounts   OAuthAccount[]
+  refreshTokens   RefreshToken[]
+  cards           UserCard[]
+  packState       PackState?
+  ghostTeam       GhostTeam?
+  battles         Battle[]
+  listings        MarketListing[]
+  quests          UserQuest[]
+  achievements    UserAchievement[]
+}
+
+model OAuthAccount {
+  id           String  @id @default(uuid())
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String
+  providerUid  String
+  accessToken  String?
+  refreshToken String?
+
+  @@unique([provider, providerUid])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  family    String
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+}
+
+// ─── Cards ────────────────────────────────────────────────────────────────────
+
+model Card {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  wikiPageId       Int    @unique
+  wikiTitle        String
+  wikiSlug         String
+  wikiExtract      String @db.Text
+  wikiThumbUrl     String?
+  wikiQualityScore Int    @default(0)
+
+  attack   Int
+  health   Int
+  speed    Int
+  rarity   Rarity
+  categories String[]
+  tags       String[]
+
+  userCards UserCard[]
+}
+
+enum Rarity {
+  C
+  UC
+  R
+  SR
+  SSR
+  UR
+  MR
+}
+
+model UserCard {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId     String
+  card       Card     @relation(fields: [cardId], references: [id])
+  acquiredAt DateTime @default(now())
+  isFoil     Boolean  @default(false)
+  isForSale  Boolean  @default(false)
+
+  listing MarketListing?
+
+  @@index([userId])
+  @@index([cardId])
+}
+
+// ─── Pack System ──────────────────────────────────────────────────────────────
+
+model PackState {
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storedPacks  Int      @default(0)
+  nextPackAt   DateTime @default(now())
+  totalOpened  Int      @default(0)
+}
+
+// ─── Battle System ────────────────────────────────────────────────────────────
+
+model GhostTeam {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  cardIds   String[]
+  cp        Int
+  snapshot  Json
+}
+
+model Battle {
+  id              String     @id @default(uuid())
+  createdAt       DateTime   @default(now())
+  mode            BattleMode
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  defenderGhostId String?
+  winnerId        String?
+  combatLog       Json
+  cpAttacker      Int
+  cpDefender      Int        @default(0)
+  coinsEarned     Int        @default(0)
+  ratingDelta     Int?
+
+  @@index([userId])
+}
+
+enum BattleMode {
+  TRAINING
+  CASUAL
+  RANKED
+  RAID
+}
+
+// ─── Marketplace ─────────────────────────────────────────────────────────────
+
+model MarketListing {
+  id         String    @id @default(uuid())
+  createdAt  DateTime  @default(now())
+  sellerId   String
+  seller     User      @relation(fields: [sellerId], references: [id])
+  userCardId String    @unique
+  userCard   UserCard  @relation(fields: [userCardId], references: [id])
+  price      Int
+  expiresAt  DateTime
+  soldAt     DateTime?
+  buyerId    String?
+
+  @@index([sellerId])
+  @@index([soldAt])
+}
+
+// ─── Quests ───────────────────────────────────────────────────────────────────
+
+model Quest {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  description String
+  coinReward  Int
+  packReward  Int        @default(0)
+  resetCycle  ResetCycle
+  userQuests  UserQuest[]
+}
+
+enum ResetCycle {
+  DAILY
+  WEEKLY
+}
+
+model UserQuest {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questId     String
+  quest       Quest     @relation(fields: [questId], references: [id])
+  progress    Int       @default(0)
+  goal        Int       @default(1)
+  completedAt DateTime?
+  claimedAt   DateTime?
+  periodStart DateTime
+
+  @@unique([userId, questId, periodStart])
+  @@index([userId])
+}
+
+// ─── Achievements ─────────────────────────────────────────────────────────────
+
+model Achievement {
+  id          String            @id @default(uuid())
+  slug        String            @unique
+  name        String
+  description String
+  iconUrl     String?
+  packReward  Int               @default(1)
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}

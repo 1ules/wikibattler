@@ -1,0 +1,10 @@
+export const MAX_STORED_PACKS = 10;
+export const PACK_COOLDOWN_SECONDS = 60;
+export const CARDS_PER_PACK = 5;
+export const TEAM_SIZE = 5;
+export const STARTING_COINS = 100;
+export const MAX_STAT_VALUE = 10000;
+export const BASE_ELO_RATING = 1000;
+export const GUEST_CARD_LIMIT = 50;
+export const MARKET_LISTING_DURATION_DAYS = 7;
+export const RAID_BOSS_GLOBAL = true;

@@ -1,0 +1,62 @@
+/* ─── Card Foil — SSR ───────────────────────────────────────────────────────── */
+@keyframes foil-sweep-ssr {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes border-glow-ssr {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.4); }
+  50%       { box-shadow: 0 0 16px 6px rgba(251, 146, 60, 0.7); }
+}
+
+/* ─── Card Foil — MR ────────────────────────────────────────────────────────── */
+@keyframes foil-sweep-mr {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes glow-pulse-mr {
+  0%, 100% { box-shadow: var(--shadow-glow-mr); }
+  50%       { box-shadow: 0 0 40px 12px rgba(168, 85, 247, 0.8), 0 0 80px 24px rgba(99, 102, 241, 0.3); }
+}
+
+@keyframes shimmer-mr {
+  0%   { opacity: 0.4; }
+  50%  { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+/* ─── Card Flip ─────────────────────────────────────────────────────────────── */
+@keyframes card-flip-in {
+  0%   { transform: rotateY(90deg) scale(0.8); opacity: 0; }
+  60%  { transform: rotateY(-10deg) scale(1.05); }
+  100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+}
+
+@keyframes card-reveal {
+  0%   { opacity: 0; transform: translateY(20px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── Pack Opening ──────────────────────────────────────────────────────────── */
+@keyframes pack-burst {
+  0%   { transform: scale(1); opacity: 1; }
+  50%  { transform: scale(1.15); opacity: 0.8; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+/* ─── UI Utilities ──────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.04); opacity: 0.85; }
+}
