@@ -16,17 +16,8 @@ export function createApp(): Express {
   const app = express();
 
   app.use(helmet());
-  // Hardcode the Vercel frontend + local dev; CLIENT_URL can extend this.
-  const allowedOrigins = new Set([
-    'https://wikibattler-client.vercel.app',
-    'http://localhost:5173',
-    env.CLIENT_URL,
-  ]);
   app.use(cors({
-    origin: (origin, cb) => {
-      if (!origin || allowedOrigins.has(origin)) return cb(null, true);
-      cb(new Error(`CORS: ${origin} not allowed`));
-    },
+    origin: ['https://wikibattler-client.vercel.app', 'http://localhost:5173', env.CLIENT_URL],
     credentials: true,
   }));
   app.use(express.json());

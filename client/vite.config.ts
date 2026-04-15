@@ -9,6 +9,11 @@ export default defineConfig({
       '@wikibattler/shared': path.resolve(__dirname, '../shared/src/index.ts'),
     },
   },
+  build: {
+    // Output to repo root dist/ so Vercel finds it at the default location.
+    outDir: path.resolve(__dirname, '../dist'),
+    emptyOutDir: true,
+  },
   server: {
     port: 5173,
     proxy: {
