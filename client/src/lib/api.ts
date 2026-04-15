@@ -1,8 +1,14 @@
 import axios from 'axios';
 import type { AxiosError } from 'axios';
 
+// In production the browser calls Render directly (cross-origin).
+// In dev the Vite proxy forwards /api → localhost:3001 (same-origin).
+const API_BASE = import.meta.env.PROD
+  ? 'https://wikibattler-server.onrender.com'
+  : '';
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_BASE}/api`,
   withCredentials: true,
 });
 
@@ -53,7 +59,7 @@ api.interceptors.response.use(
     isRefreshing = true;
     try {
       const { data } = await axios.post<{ data: { accessToken: string } }>(
-        '/api/auth/refresh',
+        `${API_BASE}/api/auth/refresh`,
         {},
         { withCredentials: true }
       );

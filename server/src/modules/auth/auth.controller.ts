@@ -10,10 +10,14 @@ import { loginSchema, registerSchema, upgradeGuestSchema } from './auth.schema.j
 import { AppError } from '../../middleware/errorHandler.js';
 
 const REFRESH_COOKIE = 'wb_refresh';
+// SameSite must be 'none' so the browser sends the cookie on cross-origin
+// requests from wikibattler-client.vercel.app → wikibattler-server.onrender.com.
+// SameSite=None requires Secure=true (enforced in production).
+const IS_PROD = process.env['NODE_ENV'] === 'production';
 const COOKIE_OPTS = {
   httpOnly: true,
-  sameSite: 'strict' as const,
-  secure: process.env['NODE_ENV'] === 'production',
+  sameSite: (IS_PROD ? 'none' : 'lax') as 'none' | 'lax',
+  secure: IS_PROD,
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: '/api/auth/refresh',
 };
