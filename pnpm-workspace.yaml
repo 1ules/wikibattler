@@ -2,8 +2,3 @@ packages:
   - 'shared'
   - 'client'
   - 'server'
-onlyBuiltDependencies:
-  - "@prisma/client"
-  - "@prisma/engines"
-  - esbuild
-  - msgpackr-extract
