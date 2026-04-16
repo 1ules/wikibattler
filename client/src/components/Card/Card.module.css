@@ -2,24 +2,46 @@
 
 /* ─── Card Base ─────────────────────────────────────────────────────────────── */
 .card {
+  --tilt-x:     0deg;
+  --tilt-y:     0deg;
+  --tilt-scale: 1;
+  --tilt-glare: 50%;
+
   position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 240px;
-  aspect-ratio: 2.5 / 3.5;
+  /* Fixed height layout — no aspect-ratio so content never overflows */
   border-radius: var(--radius-card);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   cursor: pointer;
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  transform: perspective(700px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(var(--tilt-scale));
+  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
   user-select: none;
 }
 
-.card:hover {
-  transform: translateY(-4px) scale(1.02);
+/* ─── Glare overlay (tilt light reflection) ─────────────────────────────────── */
+.glare {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: var(--radius-card);
+  background: radial-gradient(
+    circle at var(--tilt-glare) 35%,
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+
+.card:hover .glare {
+  opacity: 1;
 }
 
 /* ─── Rarity border colours ─────────────────────────────────────────────────── */
@@ -96,21 +118,22 @@
   position: relative;
   z-index: 3;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   flex-shrink: 0;
+  min-height: 2.4em;
 }
 
 .name {
-  font-size: clamp(0.6rem, 2.5cqi, 0.85rem);
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Allow wrapping — no truncation */
+  line-height: 1.3;
   flex: 1;
+  word-break: break-word;
 }
 
 .rarityBadge {
@@ -121,6 +144,7 @@
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   background: rgba(0, 0, 0, 0.4);
+  margin-top: 1px;
 }
 
 .rarityBadge-C   { color: var(--rarity-c);   border: 1px solid var(--rarity-c); }
@@ -131,11 +155,13 @@
 .rarityBadge-UR  { color: var(--rarity-ur);  border: 1px solid var(--rarity-ur); }
 .rarityBadge-MR  { color: var(--rarity-mr);  border: 1px solid var(--rarity-mr); }
 
-/* ─── Art Section ───────────────────────────────────────────────────────────── */
+/* ─── Art Section — fixed height, no flex-grow ─────────────────────────────── */
 .art {
   position: relative;
   z-index: 3;
-  flex: 1;
+  width: calc(100% - var(--space-2) * 2);
+  height: 130px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,9 +178,14 @@
 }
 
 .artFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-4);
   text-align: center;
-  font-size: clamp(0.55rem, 3cqi, 0.8rem);
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-text-muted);
   line-height: 1.3;
@@ -188,43 +219,53 @@
 }
 
 .statValue {
-  font-size: clamp(0.65rem, 2.5cqi, 0.9rem);
+  font-size: 0.85rem;
   font-weight: 800;
   color: var(--color-text);
 }
 
-/* ─── Description ───────────────────────────────────────────────────────────── */
+/* ─── Description — 2 lines max ─────────────────────────────────────────────── */
 .description {
   position: relative;
   z-index: 3;
-  padding: var(--space-2) var(--space-3);
-  font-size: clamp(0.5rem, 1.8cqi, 0.65rem);
+  padding: 0 var(--space-3) var(--space-2);
+  font-size: 0.63rem;
   color: var(--color-text-muted);
   line-height: 1.4;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   flex-shrink: 0;
 }
 
-/* ─── Tags ───────────────────────────────────────────────────────────────────── */
+/* ─── Tags — single row, overflow hidden ────────────────────────────────────── */
 .tags {
   position: relative;
   z-index: 3;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 3px;
-  padding: var(--space-1) var(--space-3) var(--space-2);
+  padding: 0 var(--space-3) var(--space-2);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .tag {
-  font-size: 0.45rem;
+  font-size: 0.48rem;
   padding: 1px 5px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.07);
   color: var(--color-text-muted);
   text-transform: capitalize;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Selected state ────────────────────────────────────────────────────────── */
+.selected {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /* ─── Reveal animation ──────────────────────────────────────────────────────── */

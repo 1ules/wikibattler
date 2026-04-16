@@ -17,8 +17,12 @@ export function Collection() {
   usePackState();
 
   async function handleOpenPack() {
-    const result = await openPack.mutateAsync();
-    setPendingCards(result.cards as UserCard[]);
+    try {
+      const result = await openPack.mutateAsync();
+      setPendingCards(result.cards as UserCard[]);
+    } catch {
+      // 409 = no packs available (store already up to date); silently ignore
+    }
   }
 
   function handleOpenerClose() {

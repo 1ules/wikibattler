@@ -13,9 +13,19 @@ interface PackOpenerProps {
 export function PackOpener({ cards, onClose }: PackOpenerProps) {
   const [phase, setPhase] = useState<Phase>('sealed');
   const [revealed, setRevealed] = useState<boolean[]>(() => cards.map(() => false));
+  // Phase-transition timer — cleared by useEffect cleanup
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Reveal timers stored separately so useEffect cleanup never cancels them
+  const revealTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Auto-advance through animation phases
+  // Cleanup all reveal timers on unmount
+  useEffect(() => {
+    return () => {
+      revealTimersRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  // Auto-advance through phases
   useEffect(() => {
     if (phase === 'sealed') {
       timerRef.current = setTimeout(() => setPhase('shaking'), 400);
@@ -24,29 +34,35 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
     } else if (phase === 'bursting') {
       timerRef.current = setTimeout(() => {
         setPhase('revealing');
-        revealCards();
+        startReveal();
       }, 500);
     }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [phase]);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function revealCards() {
-    cards.forEach((_, i) => {
-      timerRef.current = setTimeout(() => {
+  function startReveal() {
+    revealTimersRef.current.forEach(clearTimeout);
+    revealTimersRef.current = cards.map((_, i) =>
+      setTimeout(() => {
         setRevealed((prev) => {
           const next = [...prev];
           next[i] = true;
           return next;
         });
         if (i === cards.length - 1) {
-          setTimeout(() => setPhase('done'), 300);
+          const doneTimer = setTimeout(() => setPhase('done'), 300);
+          revealTimersRef.current.push(doneTimer);
         }
-      }, i * 200);
-    });
+      }, i * 220)
+    );
   }
 
   function handleSkip() {
     if (timerRef.current) clearTimeout(timerRef.current);
+    revealTimersRef.current.forEach(clearTimeout);
+    revealTimersRef.current = [];
     setPhase('done');
     setRevealed(cards.map(() => true));
   }
@@ -57,30 +73,28 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
       setPhase('bursting');
       timerRef.current = setTimeout(() => {
         setPhase('revealing');
-        revealCards();
+        startReveal();
       }, 500);
     }
   }
 
-  const showPack = phase === 'sealed' || phase === 'shaking' || phase === 'bursting';
+  const showPack  = phase === 'sealed' || phase === 'shaking' || phase === 'bursting';
   const showCards = phase === 'revealing' || phase === 'done';
 
   return (
     <div className={styles.overlay} aria-modal="true" role="dialog">
       <div className={styles.modal}>
-        {/* Skip button */}
         {phase !== 'done' && (
           <button className={styles.skipBtn} onClick={handleSkip}>
             Skip
           </button>
         )}
 
-        {/* Pack visual */}
         {showPack && (
           <div
             className={[
               styles.packWrap,
-              phase === 'shaking' ? styles.shaking : '',
+              phase === 'shaking'  ? styles.shaking  : '',
               phase === 'bursting' ? styles.bursting : '',
             ].filter(Boolean).join(' ')}
             onClick={handlePackClick}
@@ -97,13 +111,10 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
               </div>
               <div className={styles.packShine} />
             </div>
-            {phase === 'sealed' && (
-              <p className={styles.packHint}>Click to open!</p>
-            )}
+            {phase === 'sealed' && <p className={styles.packHint}>Click to open!</p>}
           </div>
         )}
 
-        {/* Burst particles */}
         {phase === 'bursting' && (
           <div className={styles.burstParticles}>
             {Array.from({ length: 12 }, (_, i) => (
@@ -116,7 +127,6 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
           </div>
         )}
 
-        {/* Card reveal grid */}
         {showCards && (
           <div className={styles.cardGrid}>
             {cards.map((uc, i) => (
@@ -126,21 +136,13 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
                   styles.cardSlot,
                   revealed[i] ? styles.revealed : styles.hidden,
                 ].join(' ')}
-                style={{ '--delay': `${i * 0.15}s` } as React.CSSProperties}
               >
-                {revealed[i] && (
-                  <Card
-                    userCard={uc}
-                    revealing
-                    style={{ animationDelay: `${i * 0.12}s` }}
-                  />
-                )}
+                {revealed[i] && <Card userCard={uc} revealing />}
               </div>
             ))}
           </div>
         )}
 
-        {/* Continue button */}
         {phase === 'done' && (
           <button className={styles.continueBtn} onClick={onClose}>
             Add to Collection

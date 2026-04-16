@@ -27,7 +27,7 @@
   top: 0;
   right: var(--space-4);
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-full);
+  border-radius: 9999px;
   background: rgba(255, 255, 255, 0.1);
   color: var(--color-text-muted);
   font-size: 0.8rem;
@@ -223,7 +223,7 @@
 /* ─── Continue Button ─────────────────────────────────────────────────────── */
 .continueBtn {
   padding: var(--space-4) var(--space-10);
-  border-radius: var(--radius-full);
+  border-radius: 9999px;
   background: var(--color-accent);
   color: white;
   font-size: 1rem;
