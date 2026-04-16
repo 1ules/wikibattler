@@ -92,9 +92,16 @@ LIMIT 60`.trim();
 
   try {
     const url = `${SPARQL}?query=${encodeURIComponent(query)}&format=json`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
     const res = await fetch(url, {
       headers: { ...HEADERS, Accept: 'application/sparql-results+json' },
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
+
     if (!res.ok) return [];
 
     const json = await res.json() as {

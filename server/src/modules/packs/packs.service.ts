@@ -1,6 +1,7 @@
 import { prisma } from '../../config/database.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { generateSlotCard, generatePityCard } from '../wikipedia/card-factory.js';
+import { enrichCardsWithQids } from '../wikipedia/backfill.service.js';
 import {
   MAX_STORED_PACKS,
   PACK_COOLDOWN_SECONDS,
@@ -148,6 +149,14 @@ export async function openPack(userId: string) {
     return results;
   });
 
+  // Enrich new cards with WikiData QIDs in the background (non-blocking)
+  const newCardIds = userCards
+    .filter(uc => uc.card.qidChain == null || (uc.card.qidChain as unknown[]).length === 0)
+    .map(uc => ({ id: uc.card.id, wikiTitle: uc.card.wikiTitle }));
+  if (newCardIds.length > 0) {
+    setImmediate(() => enrichCardsWithQids(newCardIds).catch(console.error));
+  }
+
   const newState = await getPackState(userId);
   return {
     cards: userCards,
@@ -202,6 +211,12 @@ export async function openPityPack(userId: string, tier: PityTier) {
 
     return uc;
   });
+
+  if ((userCard.card.qidChain as unknown[]).length === 0) {
+    setImmediate(() =>
+      enrichCardsWithQids([{ id: userCard.card.id, wikiTitle: userCard.card.wikiTitle }]).catch(console.error)
+    );
+  }
 
   const newState = await getPackState(userId);
   return { card: userCard, packState: newState };

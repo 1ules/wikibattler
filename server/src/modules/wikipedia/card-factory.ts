@@ -9,7 +9,6 @@ import {
   fetchRandomSummary,
   fetchPageviews,
   fetchWikiRankScore,
-  fetchWikiDataQids,
   articleLengthToScore,
   type WikiSummary,
 } from './wikipedia.client.js';
@@ -84,8 +83,9 @@ export async function buildCardFromArticle(
   summary: WikiSummary,
   forcedRarity?: Rarity
 ): Promise<CardCreateData> {
-  const [qidChain, pageviews, wikiRankRaw] = await Promise.all([
-    fetchWikiDataQids(summary.title),
+  // WikiData QIDs are fetched separately (async background enrichment)
+  // to keep pack opening fast. qidChain starts empty and is populated later.
+  const [pageviews, wikiRankRaw] = await Promise.all([
     fetchPageviews(summary.title),
     forcedRarity ? Promise.resolve(-1) : fetchWikiRankScore(summary.title),
   ]);
@@ -115,7 +115,7 @@ export async function buildCardFromArticle(
     wikiThumbUrl:     summary.thumbnail?.source ?? null,
     wikiQualityScore: qualityScore,
     rarity,
-    qidChain,
+    qidChain: [],
     ...stats,
   };
 }
