@@ -149,21 +149,17 @@ export function Card({
       {/* Flex spacer — pushes tags to the bottom regardless of description length */}
       <div className={styles.spacer} aria-hidden="true" />
 
-      {/* Tags — always pinned to bottom */}
-      <div className={styles.tags}>
-        {hasNoTags ? (
-          <span className={`${styles.tag} ${styles.tagNull}`}>null</span>
-        ) : (
-          <>
-            {visibleTags.map((tag) => (
-              <span key={tag} className={styles.tag}>{tag}</span>
-            ))}
-            {overflowCount > 0 && (
-              <span className={styles.tagOverflow}>+{overflowCount}</span>
-            )}
-          </>
-        )}
-      </div>
+      {/* WikiData type labels — only shown when populated */}
+      {!hasNoTags && (
+        <div className={styles.tags}>
+          {visibleTags.map((tag) => (
+            <span key={tag} className={styles.tag}>{tag}</span>
+          ))}
+          {overflowCount > 0 && (
+            <span className={styles.tagOverflow}>+{overflowCount}</span>
+          )}
+        </div>
+      )}
     </article>
   );
 }

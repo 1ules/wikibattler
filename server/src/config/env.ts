@@ -14,6 +14,7 @@ const envSchema = z.object({
   DISCORD_CLIENT_ID: z.string().optional(),
   DISCORD_CLIENT_SECRET: z.string().optional(),
   CLIENT_URL: z.string().default('http://localhost:5173'),
+  ADMIN_SECRET: z.string().default('change-me'),
 });
 
 const parsed = envSchema.safeParse(process.env);
