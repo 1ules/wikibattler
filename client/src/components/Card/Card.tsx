@@ -32,6 +32,7 @@ export function Card({ userCard, revealing = false, onClick, selected = false, s
         revealing ? styles.revealing : '',
         selected ? styles.selected : '',
       ].filter(Boolean).join(' ')}
+      style={style}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -82,7 +83,7 @@ export function Card({ userCard, revealing = false, onClick, selected = false, s
       )}
 
       {/* Tags */}
-      {card.tags.length > 0 && (
+      {(card.tags?.length ?? 0) > 0 && (
         <div className={styles.tags}>
           {card.tags.slice(0, 5).map((tag) => (
             <span key={tag} className={styles.tag}>{tag}</span>

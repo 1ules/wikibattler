@@ -124,5 +124,5 @@ export async function openPack(userId: string) {
   });
 
   const newState = await getPackState(userId);
-  return { userCards, packState: newState };
+  return { cards: userCards, packState: newState };
 }

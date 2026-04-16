@@ -69,21 +69,61 @@
   animation: pulse-ring 1.5s ease-in-out infinite;
 }
 
-/* New cards highlight */
-.newCards {
+/* Pack controls row */
+.packControls {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-4);
 }
 
-.newCardsTitle {
-  font-size: 1.1rem;
+.packTimer {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.countdown {
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   color: var(--color-accent);
 }
 
-.newCardsGrid {
+/* ─── Card Detail Modal ───────────────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fade-in 0.2s ease;
+}
+
+.modalContent {
+  position: relative;
+  width: clamp(260px, 90vw, 340px);
+  animation: slide-up 0.25s ease;
+}
+
+.modalClose {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  border: 1px solid var(--color-border);
+}
+
+.modalClose:hover {
+  background: var(--color-border);
+  color: var(--color-text);
 }
