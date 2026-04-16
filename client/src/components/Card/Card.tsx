@@ -41,8 +41,8 @@ export function Card({
     isFoil && card.rarity === 'SSR' ? styles['foil-ssr'] :
     '';
 
-  const rarityBorderClass = styles[`rarity-${card.rarity}`] ?? '';
-  const rarityBadgeClass  = styles[`rarityBadge-${card.rarity}`] ?? '';
+  const themeClass      = styles[`theme-${card.rarity}`]      ?? '';
+  const rarityBadgeClass = styles[`rarityBadge-${card.rarity}`] ?? '';
 
   function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
     if (!tilt || revealing) return;
@@ -72,7 +72,7 @@ export function Card({
       className={[
         styles.card,
         large ? styles.large : '',
-        rarityBorderClass,
+        themeClass,
         foilClass,
         revealing ? styles.revealing : '',
         selected  ? styles.selected  : '',

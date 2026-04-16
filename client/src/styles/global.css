@@ -2,36 +2,39 @@
 
 /* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Surface */
-  --color-bg:           #0f0f14;
-  --color-surface:      #1a1a24;
-  --color-surface-2:    #22223a;
-  --color-border:       #2e2e45;
+  /* Surfaces — deep navy/charcoal */
+  --color-bg:           #07090f;
+  --color-surface:      #0f1422;
+  --color-surface-2:    #182036;
+  --color-border:       #252d4a;
 
   /* Text */
-  --color-text:         #e8e8f0;
-  --color-text-muted:   #8888aa;
-  --color-text-faint:   #5555772;
+  --color-text:         #e8eaf6;
+  --color-text-muted:   #7a8aaa;
+  --color-text-faint:   #3a4560;
 
-  /* Brand */
-  --color-accent:       #7c6af7;
-  --color-accent-hover: #9384ff;
+  /* Brand — deep purple */
+  --color-accent:       #8b72ff;
+  --color-accent-hover: #a694ff;
 
-  /* Rarity Colours */
+  /* Gold — premium secondary */
+  --color-gold:         #c8a84b;
+  --color-gold-light:   #f0c860;
+  --color-gold-dark:    #7a6228;
+
+  /* Rarity colours */
   --rarity-c:    #9ca3af;
-  --rarity-uc:   #22c55e;
-  --rarity-r:    #3b82f6;
-  --rarity-sr:   #f97316;
-  --rarity-ssr:  #ef4444;
-  --rarity-ur:   #eab308;
-  --rarity-mr:   #a855f7;
+  --rarity-uc:   #34d399;
+  --rarity-r:    #60a5fa;
+  --rarity-sr:   #fb923c;
+  --rarity-ssr:  #f87171;
+  --rarity-ur:   #fbbf24;
+  --rarity-mr:   #c084fc;
 
-  /* Foil Gradient — SSR */
+  /* Foil gradients */
   --foil-ssr-1: #ef4444;
   --foil-ssr-2: #fb923c;
   --foil-ssr-3: #fbbf24;
-
-  /* Foil Gradient — MR */
   --foil-mr-1:  #a855f7;
   --foil-mr-2:  #ec4899;
   --foil-mr-3:  #6366f1;
@@ -49,10 +52,10 @@
   --space-12: 3rem;
 
   /* Radius */
-  --radius-sm:  4px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
-  --radius-xl:  16px;
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
   --radius-card: 14px;
 
   /* Font */
@@ -65,14 +68,18 @@
   --transition-slow:   400ms ease;
 
   /* Shadow */
-  --shadow-card:  0 4px 20px rgba(0, 0, 0, 0.5);
-  --shadow-glow-mr: 0 0 24px 8px rgba(168, 85, 247, 0.5), 0 0 48px 16px rgba(168, 85, 247, 0.2);
+  --shadow-card:    0 4px 28px rgba(0, 0, 0, 0.75);
+  --shadow-glow-mr: 0 0 28px 8px rgba(192, 132, 252, 0.55), 0 0 56px 18px rgba(192, 132, 252, 0.2);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────── */
 body {
   font-family: var(--font-sans);
   background-color: var(--color-bg);
+  /* Atmospheric vignette */
+  background-image:
+    radial-gradient(ellipse at 15% 10%, rgba(139, 114, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 90%, rgba(200, 168, 75, 0.04) 0%, transparent 50%);
   color: var(--color-text);
   min-height: 100dvh;
 }
@@ -84,6 +91,7 @@ body {
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold-dark); }
