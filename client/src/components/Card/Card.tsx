@@ -3,6 +3,8 @@ import type { UserCard } from '@wikibattler/shared';
 import { RARITY_DISPLAY } from '@wikibattler/shared';
 import styles from './Card.module.css';
 
+const MAX_VISIBLE_TAGS = 3;
+
 interface CardProps {
   userCard: UserCard;
   revealing?: boolean;
@@ -26,44 +28,48 @@ export function Card({
   const rarityInfo = RARITY_DISPLAY[card.rarity];
   const cardRef = useRef<HTMLElement>(null);
 
-  /** First sentence of the extract, hard-capped at 10 words with ellipsis */
-  const displayDesc = React.useMemo(() => {
-    if (!card.wikiExtract) return '';
-    const dot = card.wikiExtract.search(/[.!?]/);
-    const sentence = dot > 0 ? card.wikiExtract.slice(0, dot) : card.wikiExtract;
-    const words = sentence.trim().split(/\s+/);
-    if (words.length <= 10) return sentence.trim();
-    return words.slice(0, 10).join(' ') + '…';
-  }, [card.wikiExtract]);
-
   const foilClass =
     isFoil && card.rarity === 'MR'  ? styles['foil-mr']  :
     isFoil && card.rarity === 'SSR' ? styles['foil-ssr'] :
     '';
 
-  const themeClass      = styles[`theme-${card.rarity}`]      ?? '';
+  const themeClass       = styles[`theme-${card.rarity}`]       ?? '';
   const rarityBadgeClass = styles[`rarityBadge-${card.rarity}`] ?? '';
 
-  function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
-    if (!tilt || revealing) return;
+  const visibleTags   = card.tags?.slice(0, MAX_VISIBLE_TAGS) ?? [];
+  const overflowCount = Math.max(0, (card.tags?.length ?? 0) - MAX_VISIBLE_TAGS);
+  const hasNoTags     = (card.tags?.length ?? 0) === 0;
+
+  function applyTilt(clientX: number, clientY: number) {
     const el = cardRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const dx = (e.clientX - (rect.left + rect.width  / 2)) / (rect.width  / 2);
-    const dy = (e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2);
+    const dx = (clientX - (rect.left + rect.width  / 2)) / (rect.width  / 2);
+    const dy = (clientY - (rect.top  + rect.height / 2)) / (rect.height / 2);
     el.style.setProperty('--tilt-x', `${(-dy * 14).toFixed(1)}deg`);
     el.style.setProperty('--tilt-y', `${( dx * 14).toFixed(1)}deg`);
     el.style.setProperty('--tilt-scale', '1.05');
     el.style.setProperty('--tilt-glare', `${Math.round((dx + 1) * 50)}%`);
   }
 
-  function handleMouseLeave() {
+  function resetTilt() {
     const el = cardRef.current;
     if (!el) return;
     el.style.setProperty('--tilt-x', '0deg');
     el.style.setProperty('--tilt-y', '0deg');
     el.style.setProperty('--tilt-scale', '1');
     el.style.setProperty('--tilt-glare', '50%');
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
+    if (!tilt || revealing) return;
+    applyTilt(e.clientX, e.clientY);
+  }
+
+  function handleTouchMove(e: React.TouchEvent<HTMLElement>) {
+    if (!tilt || revealing) return;
+    const touch = e.touches[0];
+    if (touch) applyTilt(touch.clientX, touch.clientY);
   }
 
   return (
@@ -79,17 +85,19 @@ export function Card({
       ].filter(Boolean).join(' ')}
       style={style}
       onClick={onClick}
-      role="button"
-      tabIndex={0}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       aria-label={`${card.wikiTitle}, ${rarityInfo.label}`}
       onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
       onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      onMouseLeave={resetTilt}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={resetTilt}
     >
       {/* Glare layer */}
       <div className={styles.glare} aria-hidden="true" />
 
-      {/* Header */}
+      {/* Header — single line with ellipsis, rarity badge never overlaps */}
       <header className={styles.header}>
         <span className={styles.name}>{card.wikiTitle}</span>
         <span className={[styles.rarityBadge, rarityBadgeClass].join(' ')}>
@@ -127,19 +135,27 @@ export function Card({
         </div>
       </div>
 
-      {/* Description */}
-      {displayDesc && (
-        <p className={styles.description}>{displayDesc}</p>
-      )}
+      {/* Description — always rendered; CSS clamps to 2 lines */}
+      <p className={styles.description}>{card.wikiExtract ?? ''}</p>
 
-      {/* Tags */}
-      {(card.tags?.length ?? 0) > 0 && (
-        <div className={styles.tags}>
-          {card.tags.slice(0, 5).map((tag) => (
-            <span key={tag} className={styles.tag}>{tag}</span>
-          ))}
-        </div>
-      )}
+      {/* Flex spacer — pushes tags to the bottom regardless of description length */}
+      <div className={styles.spacer} aria-hidden="true" />
+
+      {/* Tags — always pinned to bottom */}
+      <div className={styles.tags}>
+        {hasNoTags ? (
+          <span className={`${styles.tag} ${styles.tagNull}`}>null</span>
+        ) : (
+          <>
+            {visibleTags.map((tag) => (
+              <span key={tag} className={styles.tag}>{tag}</span>
+            ))}
+            {overflowCount > 0 && (
+              <span className={styles.tagOverflow}>+{overflowCount}</span>
+            )}
+          </>
+        )}
+      </div>
     </article>
   );
 }

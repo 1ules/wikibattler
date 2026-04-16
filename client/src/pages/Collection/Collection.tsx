@@ -19,10 +19,12 @@ export function Collection() {
     pityUrProgress,
   } = usePackStore();
 
-  const openPack = useOpenPack();
+  const openPack     = useOpenPack();
   const openPityPack = useOpenPityPack();
-  const [pendingCards, setPendingCards] = useState<UserCard[] | null>(null);
-  const [selectedCard, setSelectedCard] = useState<UserCard | null>(null);
+
+  const [pendingCards, setPendingCards]   = useState<UserCard[] | null>(null);
+  const [selectedCard, setSelectedCard]   = useState<UserCard | null>(null);
+  const [copiedShare, setCopiedShare]     = useState(false);
 
   usePackState();
 
@@ -30,27 +32,31 @@ export function Collection() {
     try {
       const result = await openPack.mutateAsync();
       setPendingCards(result.cards as UserCard[]);
-    } catch {
-      // 409 = no packs available; silently ignore
-    }
+    } catch { /* 409 = no packs */ }
   }
 
   async function handleOpenPityPack(tier: 'SR' | 'UR') {
     try {
       const result = await openPityPack.mutateAsync(tier);
       setPendingCards([result.card as UserCard]);
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }
 
-  function handleOpenerClose() {
-    setPendingCards(null);
+  async function handleShare(card: UserCard['card']) {
+    const url = `https://en.wikipedia.org/wiki/${card.wikiSlug}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `WikiBattler — ${card.wikiTitle}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopiedShare(true);
+        setTimeout(() => setCopiedShare(false), 2000);
+      }
+    } catch { /* user cancelled share */ }
   }
 
   const mm = Math.floor(secondsUntilNext / 60).toString().padStart(2, '0');
   const ss = (secondsUntilNext % 60).toString().padStart(2, '0');
-
   const srPct = (pitySrProgress / PITY_SR_THRESHOLD) * 100;
   const urPct = (pityUrProgress / PITY_UR_THRESHOLD) * 100;
 
@@ -58,10 +64,10 @@ export function Collection() {
     <div className={styles.page}>
       {/* Pack opener overlay */}
       {pendingCards && (
-        <PackOpener cards={pendingCards} onClose={handleOpenerClose} />
+        <PackOpener cards={pendingCards} onClose={() => setPendingCards(null)} />
       )}
 
-      {/* Card detail modal */}
+      {/* ── Card detail modal ── */}
       {selectedCard && (
         <div
           className={styles.modalOverlay}
@@ -69,23 +75,71 @@ export function Collection() {
           role="dialog"
           aria-modal="true"
         >
-          <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <button
               className={styles.modalClose}
               onClick={() => setSelectedCard(null)}
               aria-label="Close"
-            >
-              ✕
-            </button>
-            <Card userCard={selectedCard} large tilt />
+            >✕</button>
+
+            {/* Full card name */}
+            <h2 className={styles.modalCardName}>{selectedCard.card.wikiTitle}</h2>
+
+            {/* Three-column: actions | card | extract */}
+            <div className={styles.modalMain}>
+              {/* Left — action buttons */}
+              <div className={styles.modalActions}>
+                <a
+                  className={styles.modalActionBtn}
+                  href={`https://en.wikipedia.org/wiki/${selectedCard.card.wikiSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View on Wikipedia"
+                >
+                  <span className={styles.modalActionIcon}>🌐</span>
+                  <span>Wiki</span>
+                </a>
+                <button
+                  className={styles.modalActionBtn}
+                  onClick={() => handleShare(selectedCard.card)}
+                  title="Share card"
+                >
+                  <span className={styles.modalActionIcon}>
+                    {copiedShare ? '✓' : '↗'}
+                  </span>
+                  <span>{copiedShare ? 'Copied!' : 'Share'}</span>
+                </button>
+              </div>
+
+              {/* Card — same size/format as collection */}
+              <div className={styles.modalCardWrap}>
+                <Card userCard={selectedCard} tilt />
+              </div>
+
+              {/* Right — scrollable extract with fade */}
+              <div className={styles.modalExtract}>
+                <div className={styles.modalExtractScroll}>
+                  <p className={styles.modalExtractText}>
+                    {selectedCard.card.wikiExtract || 'No description available.'}
+                  </p>
+                </div>
+                <div className={styles.modalExtractFade} aria-hidden="true" />
+              </div>
+            </div>
+
+            {/* All tags */}
+            {(selectedCard.card.tags?.length ?? 0) > 0 && (
+              <div className={styles.modalTags}>
+                {selectedCard.card.tags.map((tag) => (
+                  <span key={tag} className={styles.modalTag}>{tag}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Page header */}
+      {/* ── Page header ── */}
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Collection</h1>
         <div className={styles.packControls}>
@@ -109,13 +163,12 @@ export function Collection() {
         <h2 className={styles.pitySectionTitle}>Pity Packs</h2>
         <div className={styles.pityRows}>
 
-          {/* SR / SSR pity row */}
           <div className={styles.pityRow}>
             <div className={styles.pityLabel}>
               <span className={styles.pityLabelTitle}>
                 SR / SSR
                 {pitySrAvailable > 0 && (
-                  <span className={styles.pityBadge + ' ' + styles.pityBadgeSr}>
+                  <span className={`${styles.pityBadge} ${styles.pityBadgeSr}`}>
                     {pitySrAvailable}
                   </span>
                 )}
@@ -126,14 +179,9 @@ export function Collection() {
             </div>
             <div className={styles.pityBarWrap}>
               <div className={styles.pityBarTrack}>
-                <div
-                  className={`${styles.pityBarFill} ${styles.pityBarFillSr}`}
-                  style={{ width: `${srPct}%` }}
-                />
+                <div className={`${styles.pityBarFill} ${styles.pityBarFillSr}`} style={{ width: `${srPct}%` }} />
               </div>
-              <span className={styles.pityBarLabel}>
-                {pitySrProgress} / {PITY_SR_THRESHOLD} packs
-              </span>
+              <span className={styles.pityBarLabel}>{pitySrProgress} / {PITY_SR_THRESHOLD} packs</span>
             </div>
             <button
               className={`${styles.pityOpenBtn} ${styles.pityOpenBtnSr}`}
@@ -144,13 +192,12 @@ export function Collection() {
             </button>
           </div>
 
-          {/* UR / MR pity row */}
           <div className={styles.pityRow}>
             <div className={styles.pityLabel}>
               <span className={styles.pityLabelTitle}>
                 UR / MR
                 {pityUrAvailable > 0 && (
-                  <span className={styles.pityBadge + ' ' + styles.pityBadgeUr}>
+                  <span className={`${styles.pityBadge} ${styles.pityBadgeUr}`}>
                     {pityUrAvailable}
                   </span>
                 )}
@@ -161,14 +208,9 @@ export function Collection() {
             </div>
             <div className={styles.pityBarWrap}>
               <div className={styles.pityBarTrack}>
-                <div
-                  className={`${styles.pityBarFill} ${styles.pityBarFillUr}`}
-                  style={{ width: `${urPct}%` }}
-                />
+                <div className={`${styles.pityBarFill} ${styles.pityBarFillUr}`} style={{ width: `${urPct}%` }} />
               </div>
-              <span className={styles.pityBarLabel}>
-                {pityUrProgress} / {PITY_UR_THRESHOLD} packs
-              </span>
+              <span className={styles.pityBarLabel}>{pityUrProgress} / {PITY_UR_THRESHOLD} packs</span>
             </div>
             <button
               className={`${styles.pityOpenBtn} ${styles.pityOpenBtnUr}`}
@@ -182,7 +224,7 @@ export function Collection() {
         </div>
       </section>
 
-      {/* Collection grid */}
+      {/* ── Collection grid ── */}
       {isLoading ? (
         <div className={styles.loadingGrid}>
           {Array.from({ length: 12 }, (_, i) => (

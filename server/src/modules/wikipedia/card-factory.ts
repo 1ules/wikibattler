@@ -71,14 +71,15 @@ function deriveStats(
   };
 }
 
-/** Extract first sentence from Wikipedia extract, hard-cap at maxWords. */
-function firstSentence(text: string, maxWords = 10): string {
+/**
+ * Extract the first paragraph from a Wikipedia extract.
+ * Wikipedia extracts separate paragraphs with \n. We take the first one,
+ * capped at 800 chars so the DB field stays reasonable.
+ */
+function firstParagraph(text: string): string {
   if (!text) return '';
-  const dot = text.search(/[.!?]/);
-  const sentence = dot > 0 ? text.slice(0, dot) : text;
-  const words = sentence.trim().split(/\s+/);
-  if (words.length <= maxWords) return sentence.trim();
-  return words.slice(0, maxWords).join(' ') + '\u2026';
+  const para = text.split('\n')[0] ?? text;
+  return para.trim().slice(0, 800);
 }
 
 /**
@@ -124,13 +125,14 @@ export async function buildCardFromArticle(
 
   const titleLength = summary.title.length;
   const stats = deriveStats(pageviews, articleBytes, titleLength, rarity);
-  const tags  = categoriesToTags(categories);
+  const rawTags = categoriesToTags(categories);
+  const tags    = rawTags.length > 0 ? rawTags : ['null'];
 
   return {
     wikiPageId:       summary.pageid,
     wikiTitle:        summary.title,
     wikiSlug:         summary.title.replace(/ /g, '_'),
-    wikiExtract:      firstSentence(summary.extract, 10),
+    wikiExtract:      firstParagraph(summary.extract),
     wikiThumbUrl:     summary.thumbnail?.source ?? null,
     wikiQualityScore: qualityScore,
     rarity,
