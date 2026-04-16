@@ -1,3 +1,33 @@
-.page { display: flex; flex-direction: column; gap: var(--space-6); }
-.title { font-size: 1.75rem; font-weight: 900; }
-.subtitle { color: var(--color-text-muted); }
+@import '../../styles/animations.css';
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.resolvingBadge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(139,114,255,0.12);
+  border: 1px solid rgba(139,114,255,0.3);
+  border-radius: 9999px;
+  padding: var(--space-1) var(--space-3);
+  animation: pulse-ring 1.2s ease-in-out infinite;
+}

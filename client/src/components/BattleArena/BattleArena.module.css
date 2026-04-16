@@ -1,0 +1,270 @@
+@import '../../styles/animations.css';
+
+/* ─── Root ───────────────────────────────────────────────────────────────── */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+
+/* ─── Result Banner ──────────────────────────────────────────────────────── */
+.resultBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-lg);
+  animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.bannerWin  { background: rgba(139,114,255,0.15); border: 1px solid rgba(139,114,255,0.4); }
+.bannerLoss { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.35); }
+.bannerDraw { background: rgba(156,163,175,0.1);  border: 1px solid rgba(156,163,175,0.3); }
+
+.resultIcon { font-size: 1.5rem; }
+
+.resultText {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.resultCoins {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-gold);
+  background: rgba(200,168,75,0.1);
+  border: 1px solid rgba(200,168,75,0.25);
+  border-radius: 9999px;
+  padding: 2px var(--space-3);
+}
+
+.resultRating {
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 2px var(--space-3);
+}
+.ratingPos { color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); }
+.ratingNeg { color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); }
+
+/* ─── HP Section ─────────────────────────────────────────────────────────── */
+.hpSection {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sideRight { text-align: right; }
+
+.sideHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.sideHeaderRight { justify-content: flex-end; }
+
+.sideName {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.sideCP {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.hpBarTrack {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.hpBarFill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.1s ease-out;
+  transform-origin: left center;
+}
+
+.hpBarRight {
+  float: right;
+  transform-origin: right center;
+}
+
+.hpValue {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.hpValueRight { text-align: right; }
+
+/* ─── VS Column ──────────────────────────────────────────────────────────── */
+.vsColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.vsText {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--color-text-faint);
+  letter-spacing: 0.1em;
+}
+
+.tickLabel {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Scrubber ───────────────────────────────────────────────────────────── */
+.scrubberRow {
+  padding: 0 var(--space-1);
+}
+
+.scrubber {
+  width: 100%;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* ─── Controls ───────────────────────────────────────────────────────────── */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.controlBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: 1rem;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.controlBtn:hover {
+  background: rgba(139,114,255,0.15);
+  border-color: var(--color-accent);
+  transform: scale(1.08);
+}
+
+.playPauseBtn {
+  width: 52px;
+  height: 52px;
+  font-size: 1.2rem;
+  border-color: var(--color-accent);
+  background: rgba(139,114,255,0.15);
+}
+.playPauseBtn:hover { background: rgba(139,114,255,0.3); }
+
+.speedGroup {
+  display: flex;
+  gap: 2px;
+  margin-left: var(--space-2);
+}
+
+.speedBtn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.speedBtn:hover { background: var(--color-surface); color: var(--color-text); }
+
+.speedActive {
+  background: rgba(139,114,255,0.2) !important;
+  color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+}
+
+/* ─── Event log ──────────────────────────────────────────────────────────── */
+.logSection {
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: var(--space-1);
+}
+
+.logSection::-webkit-scrollbar { width: 4px; }
+.logSection::-webkit-scrollbar-track { background: transparent; }
+.logSection::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+.logEmpty {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.logEntry {
+  display: grid;
+  grid-template-columns: 3rem 3rem 1fr;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  background: rgba(255,255,255,0.02);
+  border-left: 2px solid transparent;
+  animation: fade-in 0.2s ease;
+}
+
+.log-damage  { border-left-color: #f87171; }
+.log-crit    { border-left-color: var(--rarity-ur); background: rgba(251,191,36,0.06); }
+.log-regen   { border-left-color: #34d399; }
+.log-shield  { border-left-color: #60a5fa; }
+.log-execute { border-left-color: var(--rarity-mr); background: rgba(192,132,252,0.08); }
+
+.logTick {
+  font-size: 0.62rem;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.logSource {
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.logDesc { color: var(--color-text); }
+
+/* ─── Play again ─────────────────────────────────────────────────────────── */
+.playAgainBtn {
+  padding: var(--space-3) var(--space-6);
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+.playAgainBtn:hover { color: var(--color-text); border-color: rgba(255,255,255,0.2); }
