@@ -3,11 +3,8 @@ export type { Card, UserCard, CardStats, Rarity } from './types/card.js';
 export type { User, GuestUser, AuthUser, PublicProfile } from './types/user.js';
 export type { PackState, PackOpenResult } from './types/pack.js';
 export type {
-  SynergyRule,
-  SynergyCondition,
-  SynergyEffect,
-  SynergyTier,
-  SynergyMatch,
+  QidNode,
+  DynamicSynergy,
   TeamSynergyResult,
 } from './types/synergy.js';
 export type {
@@ -43,10 +40,10 @@ export {
   PACK_SLOT_RATES,
 } from './constants/game.js';
 export type { RarityRates } from './constants/game.js';
-export { SYNERGY_RULES } from './constants/synergy-rules.js';
-export { CATEGORY_TAG_RULES, categoriesToTags } from './constants/category-tag-map.js';
 
 // Utils
 export { calculateCP } from './utils/cp.js';
+export { evaluateTeam } from './utils/synergy.js';
+export type { CardForSynergy } from './utils/synergy.js';
 export { scoreToRarity as rarityFromScore, rarityToScore } from './utils/rarity.js';
 export { normalizeWikiTitle, wikiTitleToSlug } from './utils/slug.js';

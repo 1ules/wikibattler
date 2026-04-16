@@ -2,6 +2,7 @@ import { prisma } from '../../config/database.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { evaluateTeam } from '../synergy/synergy.engine.js';
 import { calculateCP } from '@wikibattler/shared';
+import type { QidNode } from '@wikibattler/shared';
 
 export async function saveGhostTeam(userId: string, userCardIds: string[]) {
   if (userCardIds.length !== 5) {
@@ -18,27 +19,24 @@ export async function saveGhostTeam(userId: string, userCardIds: string[]) {
   }
 
   const cardsForEval = userCards.map(uc => ({
-    rarity: uc.card.rarity as any,
-    tags: uc.card.tags,
+    qidChain: uc.card.qidChain as unknown as QidNode[],
   }));
-
   const synergyResult = evaluateTeam(cardsForEval);
 
   const cardsForCP = userCards.map(uc => ({
     attack: uc.card.attack,
     health: uc.card.health,
-    speed: uc.card.speed,
+    speed:  uc.card.speed,
   }));
   const cp = calculateCP(cardsForCP, synergyResult);
 
-  // JSON.parse/stringify strips TypeScript types → satisfies Prisma's InputJsonValue
   const snapshot = JSON.parse(JSON.stringify({
     userCards: userCards.map(uc => ({ ...uc, card: uc.card })),
     synergyResult,
   })) as object;
 
   return prisma.ghostTeam.upsert({
-    where: { userId },
+    where:  { userId },
     create: { userId, cardIds: userCardIds, cp, snapshot },
     update: { cardIds: userCardIds, cp, snapshot },
   });
@@ -52,8 +50,8 @@ export async function getRandomGhostOpponent(excludeUserId: string) {
 
   const skip = Math.floor(Math.random() * count);
   const [ghost] = await prisma.ghostTeam.findMany({
-    where: { userId: { not: excludeUserId } },
-    take: 1,
+    where:   { userId: { not: excludeUserId } },
+    take:    1,
     skip,
     include: { user: { select: { username: true } } },
   });

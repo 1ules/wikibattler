@@ -177,6 +177,12 @@
   color: var(--color-text);
 }
 
+.synergyBonus {
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ─── Mode section ───────────────────────────────────────────────────────── */
 .modeSection {
   display: flex;

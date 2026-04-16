@@ -5,6 +5,13 @@ import styles from './Card.module.css';
 
 const MAX_VISIBLE_TAGS = 3;
 
+// Pull human-readable labels from the qidChain for display
+function qidLabels(card: import('@wikibattler/shared').Card): string[] {
+  return (card.qidChain ?? [])
+    .filter(n => n.depth === 0)   // only direct types shown on card face
+    .map(n => n.label);
+}
+
 interface CardProps {
   userCard: UserCard;
   revealing?: boolean;
@@ -36,9 +43,10 @@ export function Card({
   const themeClass       = styles[`theme-${card.rarity}`]       ?? '';
   const rarityBadgeClass = styles[`rarityBadge-${card.rarity}`] ?? '';
 
-  const visibleTags   = card.tags?.slice(0, MAX_VISIBLE_TAGS) ?? [];
-  const overflowCount = Math.max(0, (card.tags?.length ?? 0) - MAX_VISIBLE_TAGS);
-  const hasNoTags     = (card.tags?.length ?? 0) === 0;
+  const allLabels     = qidLabels(card);
+  const visibleTags   = allLabels.slice(0, MAX_VISIBLE_TAGS);
+  const overflowCount = Math.max(0, allLabels.length - MAX_VISIBLE_TAGS);
+  const hasNoTags     = allLabels.length === 0;
 
   function applyTilt(clientX: number, clientY: number) {
     const el = cardRef.current;

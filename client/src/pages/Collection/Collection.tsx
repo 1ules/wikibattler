@@ -127,11 +127,13 @@ export function Collection() {
               </div>
             </div>
 
-            {/* All tags */}
-            {(selectedCard.card.tags?.length ?? 0) > 0 && (
+            {/* WikiData type labels */}
+            {(selectedCard.card.qidChain?.length ?? 0) > 0 && (
               <div className={styles.modalTags}>
-                {selectedCard.card.tags.map((tag) => (
-                  <span key={tag} className={styles.modalTag}>{tag}</span>
+                {selectedCard.card.qidChain.map((node) => (
+                  <span key={node.qid} className={styles.modalTag} title={`${node.qid} · depth ${node.depth}`}>
+                    {node.label}
+                  </span>
                 ))}
               </div>
             )}

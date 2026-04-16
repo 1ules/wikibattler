@@ -124,7 +124,7 @@ export async function openPack(userId: string) {
     for (const cardData of cardDataArray) {
       let card = await tx.card.findUnique({ where: { wikiPageId: cardData.wikiPageId } });
       if (!card) {
-        card = await tx.card.create({ data: cardData });
+        card = await tx.card.create({ data: { ...cardData, qidChain: cardData.qidChain as unknown as object[] } });
       }
       const isFoil = cardData.rarity === 'SSR' || cardData.rarity === 'MR';
       const userCard = await tx.userCard.create({
@@ -185,7 +185,7 @@ export async function openPityPack(userId: string, tier: PityTier) {
   const userCard = await prisma.$transaction(async (tx) => {
     let card = await tx.card.findUnique({ where: { wikiPageId: cardData.wikiPageId } });
     if (!card) {
-      card = await tx.card.create({ data: cardData });
+      card = await tx.card.create({ data: { ...cardData, qidChain: cardData.qidChain as unknown as object[] } });
     }
     const isFoil = rarity === 'SSR' || rarity === 'MR';
     const uc = await tx.userCard.create({

@@ -79,8 +79,7 @@ model Card {
   health   Int
   speed    Int
   rarity   Rarity
-  categories String[]
-  tags       String[]
+  qidChain Json @default("[]")
 
   userCards UserCard[]
 }

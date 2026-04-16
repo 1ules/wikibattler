@@ -1,3 +1,5 @@
+import type { QidNode } from './synergy.js';
+
 export type Rarity = 'C' | 'UC' | 'R' | 'SR' | 'SSR' | 'UR' | 'MR';
 
 export interface CardStats {
@@ -18,8 +20,7 @@ export interface Card {
   speed: number;
   rarity: Rarity;
   wikiQualityScore: number;
-  categories: string[];
-  tags: string[];
+  qidChain: QidNode[];
   createdAt: string;
 }
 

@@ -4,7 +4,7 @@ import { simulateBattle } from './battle.simulator.js';
 import { saveGhostTeam, getRandomGhostOpponent } from './ghost.service.js';
 import { evaluateTeam } from '../synergy/synergy.engine.js';
 import { calculateCP } from '@wikibattler/shared';
-import type { BattleMode } from '@wikibattler/shared';
+import type { BattleMode, QidNode } from '@wikibattler/shared';
 
 const CASUAL_COIN_WIN  = 50;
 const CASUAL_COIN_LOSS = 10;
@@ -28,36 +28,32 @@ export async function startBattle(
     throw new AppError(400, 'BadRequest', 'One or more cards not found.');
   }
 
-  // Build attacker team
   const atkCardsForEval = userCards.map(uc => ({
-    rarity: uc.card.rarity as any,
-    tags:   uc.card.tags,
-    attack: uc.card.attack,
-    health: uc.card.health,
-    speed:  uc.card.speed,
+    qidChain: uc.card.qidChain as unknown as QidNode[],
+    attack:   uc.card.attack,
+    health:   uc.card.health,
+    speed:    uc.card.speed,
   }));
   const atkSynergy = evaluateTeam(atkCardsForEval);
   const cpAttacker = calculateCP(atkCardsForEval, atkSynergy);
 
-  // Get defender
   const ghost = mode !== 'TRAINING' ? await getRandomGhostOpponent(userId) : null;
   const defCards = ghost
-    ? (ghost.snapshot as { userCards: { card: { attack: number; health: number; speed: number; rarity: string; tags: string[] } }[] }).userCards.map(uc => uc.card)
+    ? (ghost.snapshot as unknown as { userCards: { card: { attack: number; health: number; speed: number; qidChain: QidNode[] } }[] }).userCards.map(uc => uc.card)
     : generateBotTeam(cpAttacker);
 
   const defCardsForEval = defCards.map(c => ({
-    rarity: c.rarity as any,
-    tags:   c.tags,
-    attack: c.attack,
-    health: c.health,
-    speed:  c.speed,
+    qidChain: (c.qidChain ?? []) as QidNode[],
+    attack:   c.attack,
+    health:   c.health,
+    speed:    c.speed,
   }));
   const defSynergy = evaluateTeam(defCardsForEval);
   const cpDefender = calculateCP(defCardsForEval, defSynergy);
 
   const combatLog = simulateBattle(
-    { cards: atkCardsForEval },
-    { cards: defCardsForEval }
+    { cards: atkCardsForEval, synergy: atkSynergy },
+    { cards: defCardsForEval, synergy: defSynergy }
   );
 
   const won = combatLog.winner === 'attacker';
@@ -101,11 +97,10 @@ export async function startBattle(
 
 function generateBotTeam(targetCp: number) {
   const cardCp = Math.round(targetCp / 5);
-  return Array.from({ length: 5 }, (_, i) => ({
-    attack: Math.round(cardCp * 0.3),
-    health: Math.round(cardCp * 0.5),
-    speed:  Math.round(cardCp * 0.2),
-    rarity: 'C' as const,
-    tags:   [] as string[],
+  return Array.from({ length: 5 }, () => ({
+    attack:   Math.round(cardCp * 0.3),
+    health:   Math.round(cardCp * 0.5),
+    speed:    Math.round(cardCp * 0.2),
+    qidChain: [] as QidNode[],
   }));
 }

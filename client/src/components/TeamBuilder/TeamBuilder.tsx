@@ -1,17 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import {
-  SYNERGY_RULES,
-  RARITY_ORDER,
   RARITY_DISPLAY,
   calculateCP,
+  evaluateTeam,
 } from '@wikibattler/shared';
 import type {
   UserCard,
   Rarity,
   BattleMode,
-  SynergyMatch,
-  TeamSynergyResult,
-  SynergyCondition,
+  DynamicSynergy,
 } from '@wikibattler/shared';
 import { useCollection } from '../../api/useCards.js';
 import styles from './TeamBuilder.module.css';
@@ -21,92 +18,18 @@ interface TeamBuilderProps {
   isBattling: boolean;
 }
 
-// ─── Client-side synergy evaluation ──────────────────────────────────────────
-
-function rarityRank(r: Rarity): number {
-  return RARITY_ORDER.indexOf(r);
+// Synergy bonus tier labels based on multiplier magnitude
+function synergyTier(mult: number): { icon: string; color: string } {
+  if (mult >= 1.35) return { icon: '🥇', color: 'var(--rarity-ur)' };
+  if (mult >= 1.20) return { icon: '🥈', color: 'var(--rarity-r)' };
+  return                    { icon: '🥉', color: 'var(--rarity-sr)' };
 }
-
-function meetsCondition(
-  cond: SynergyCondition,
-  cards: { rarity: Rarity; tags: string[] }[]
-): boolean {
-  switch (cond.type) {
-    case 'has_tag':
-      return cards.filter((c) => c.tags.includes(cond.tag)).length >= cond.minCount;
-    case 'has_rarity': {
-      const minRank = rarityRank(cond.rarity);
-      return cards.filter((c) => rarityRank(c.rarity) >= minRank).length >= cond.minCount;
-    }
-    case 'team_size':
-      return cards.length === cond.exact;
-    case 'all_same_tag':
-      return cards.length > 0 && cards.every((c) => c.tags.includes(cond.tag));
-    default:
-      return false;
-  }
-}
-
-function evaluateTeam(cards: { rarity: Rarity; tags: string[]; attack: number; health: number; speed: number }[]): TeamSynergyResult {
-  const matched: SynergyMatch[] = [];
-  for (const rule of SYNERGY_RULES) {
-    const mode = rule.conditionMode ?? 'all';
-    const passes =
-      mode === 'all'
-        ? rule.conditions.every((c) => meetsCondition(c, cards))
-        : rule.conditions.some((c) => meetsCondition(c, cards));
-    if (passes) matched.push({ rule, activationCount: 1 });
-  }
-
-  let cpMultiplier = 1;
-  const atkMult: number[] = [1];
-  const hpMult: number[] = [1];
-  const spdMult: number[] = [1];
-  const bonusEffects: TeamSynergyResult['bonusEffects'] = [];
-
-  for (const { rule } of matched) {
-    for (const eff of rule.effects) {
-      switch (eff.type) {
-        case 'cp_multiply':
-          cpMultiplier *= eff.multiplier;
-          break;
-        case 'stat_multiply':
-          if (eff.stat === 'all' || eff.stat === 'attack') atkMult.push(eff.multiplier);
-          if (eff.stat === 'all' || eff.stat === 'health') hpMult.push(eff.multiplier);
-          if (eff.stat === 'all' || eff.stat === 'speed') spdMult.push(eff.multiplier);
-          break;
-        default:
-          bonusEffects.push(eff);
-      }
-    }
-  }
-
-  return {
-    matched,
-    cpMultiplier,
-    statMultipliers: {
-      attack: atkMult.reduce((a, b) => a * b, 1),
-      health: hpMult.reduce((a, b) => a * b, 1),
-      speed: spdMult.reduce((a, b) => a * b, 1),
-    },
-    bonusEffects,
-  };
-}
-
-const TIER_LABEL: Record<string, string> = { bronze: '🥉', silver: '🥈', gold: '🥇' };
-const TIER_COLOR: Record<string, string> = {
-  bronze: 'var(--rarity-sr)',
-  silver: 'var(--rarity-r)',
-  gold: 'var(--rarity-ur)',
-};
 
 const MODES: { mode: BattleMode; label: string; desc: string }[] = [
   { mode: 'TRAINING', label: 'Training', desc: 'vs. bot · no coins' },
   { mode: 'CASUAL',   label: 'Casual',   desc: 'vs. ghost · 10–50 coins' },
   { mode: 'RANKED',   label: 'Ranked',   desc: 'vs. ghost · ±rating' },
 ];
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
   const { data: collection, isLoading } = useCollection();
@@ -115,11 +38,8 @@ export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
   const [search, setSearch] = useState('');
 
   const cards = collection?.data ?? [];
-
-  // IDs already in team
   const teamIds = new Set(slots.filter(Boolean).map((uc) => uc!.id));
 
-  // Filtered collection
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return cards.filter(
@@ -128,18 +48,17 @@ export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
         (q === '' ||
           uc.card.wikiTitle.toLowerCase().includes(q) ||
           uc.card.rarity.toLowerCase().includes(q) ||
-          uc.card.tags.some((t) => t.includes(q)))
+          (uc.card.qidChain ?? []).some((n) => n.label.toLowerCase().includes(q)))
     );
   }, [cards, teamIds, search]);
 
-  // Synergy + CP
   const teamCards = slots.filter(Boolean).map((uc) => ({
-    rarity: uc!.card.rarity as Rarity,
-    tags: uc!.card.tags,
-    attack: uc!.card.attack,
-    health: uc!.card.health,
-    speed: uc!.card.speed,
+    qidChain: uc!.card.qidChain ?? [],
+    attack:   uc!.card.attack,
+    health:   uc!.card.health,
+    speed:    uc!.card.speed,
   }));
+
   const synergyResult = useMemo(() => evaluateTeam(teamCards), [JSON.stringify(teamCards)]);
   const cp = useMemo(() => calculateCP(teamCards, synergyResult), [teamCards, synergyResult]);
 
@@ -190,18 +109,11 @@ export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
               {uc ? (
                 <>
                   {uc.card.wikiThumbUrl ? (
-                    <img
-                      className={styles.slotImg}
-                      src={uc.card.wikiThumbUrl}
-                      alt={uc.card.wikiTitle}
-                    />
+                    <img className={styles.slotImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} />
                   ) : (
                     <div className={styles.slotImgFallback}>{uc.card.wikiTitle.slice(0, 2)}</div>
                   )}
-                  <span
-                    className={styles.slotRarity}
-                    style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}
-                  >
+                  <span className={styles.slotRarity} style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}>
                     {uc.card.rarity}
                   </span>
                   <span className={styles.slotName}>{uc.card.wikiTitle}</span>
@@ -214,20 +126,25 @@ export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
           ))}
         </div>
 
-        {/* Synergy badges */}
-        {synergyResult.matched.length > 0 && (
+        {/* Dynamic synergy badges */}
+        {synergyResult.synergies.length > 0 && (
           <div className={styles.synergies}>
-            {synergyResult.matched.map(({ rule }) => (
-              <div
-                key={rule.id}
-                className={styles.synergyBadge}
-                style={{ borderColor: TIER_COLOR[rule.tier] }}
-                title={rule.description}
-              >
-                <span className={styles.synergyTier}>{TIER_LABEL[rule.tier]}</span>
-                <span className={styles.synergyName}>{rule.name}</span>
-              </div>
-            ))}
+            {synergyResult.synergies.map((syn: DynamicSynergy) => {
+              const { icon, color } = synergyTier(syn.statMultiplier);
+              const pct = Math.round((syn.statMultiplier - 1) * 100);
+              return (
+                <div
+                  key={syn.qid}
+                  className={styles.synergyBadge}
+                  style={{ borderColor: color }}
+                  title={`${syn.sharedCount}/${syn.teamSize} cards · +${pct}% all stats`}
+                >
+                  <span className={styles.synergyTier}>{icon}</span>
+                  <span className={styles.synergyName}>{syn.label}</span>
+                  <span className={styles.synergyBonus} style={{ color }}>+{pct}%</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
@@ -266,7 +183,7 @@ export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
           <input
             className={styles.search}
             type="text"
-            placeholder="Search…"
+            placeholder="Search by name, rarity, or type…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search cards"
@@ -275,15 +192,11 @@ export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
 
         {isLoading ? (
           <div className={styles.pickerGrid}>
-            {Array.from({ length: 10 }, (_, i) => (
-              <div key={i} className={styles.pickerSkeleton} />
-            ))}
+            {Array.from({ length: 10 }, (_, i) => <div key={i} className={styles.pickerSkeleton} />)}
           </div>
         ) : filtered.length === 0 ? (
           <p className={styles.pickerEmpty}>
-            {cards.length === 0
-              ? 'No cards yet — open a pack first!'
-              : 'No cards match your search.'}
+            {cards.length === 0 ? 'No cards yet — open a pack first!' : 'No cards match your search.'}
           </p>
         ) : (
           <div className={styles.pickerGrid}>
@@ -300,30 +213,16 @@ export function TeamBuilder({ onBattle, isBattling }: TeamBuilderProps) {
                   disabled={teamFull}
                   title={uc.card.wikiTitle}
                 >
-                  <div
-                    className={styles.pickerCardInner}
-                    style={{ borderColor: info.color }}
-                  >
+                  <div className={styles.pickerCardInner} style={{ borderColor: info.color }}>
                     {uc.card.wikiThumbUrl ? (
-                      <img
-                        className={styles.pickerImg}
-                        src={uc.card.wikiThumbUrl}
-                        alt={uc.card.wikiTitle}
-                        loading="lazy"
-                      />
+                      <img className={styles.pickerImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} loading="lazy" />
                     ) : (
-                      <div className={styles.pickerImgFallback}>
-                        {uc.card.wikiTitle.slice(0, 3)}
-                      </div>
+                      <div className={styles.pickerImgFallback}>{uc.card.wikiTitle.slice(0, 3)}</div>
                     )}
                     <div className={styles.pickerInfo}>
                       <span className={styles.pickerName}>{uc.card.wikiTitle}</span>
-                      <span
-                        className={styles.pickerRarity}
-                        style={{ color: info.color }}
-                      >
-                        {uc.card.rarity}
-                        {uc.isFoil ? ' ✦' : ''}
+                      <span className={styles.pickerRarity} style={{ color: info.color }}>
+                        {uc.card.rarity}{uc.isFoil ? ' ✦' : ''}
                       </span>
                     </div>
                   </div>
