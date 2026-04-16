@@ -25,12 +25,10 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
     };
   }, []);
 
-  // Auto-advance through phases
+  // Auto-advance only after the user has clicked (shaking → bursting → revealing)
   useEffect(() => {
-    if (phase === 'sealed') {
-      timerRef.current = setTimeout(() => setPhase('shaking'), 400);
-    } else if (phase === 'shaking') {
-      timerRef.current = setTimeout(() => setPhase('bursting'), 900);
+    if (phase === 'shaking') {
+      timerRef.current = setTimeout(() => setPhase('bursting'), 800);
     } else if (phase === 'bursting') {
       timerRef.current = setTimeout(() => {
         setPhase('revealing');
@@ -68,13 +66,9 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
   }
 
   function handlePackClick() {
-    if (phase === 'sealed' || phase === 'shaking') {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      setPhase('bursting');
-      timerRef.current = setTimeout(() => {
-        setPhase('revealing');
-        startReveal();
-      }, 500);
+    if (phase === 'sealed') {
+      // First click: start the shake animation; auto-advance handles the rest
+      setPhase('shaking');
     }
   }
 
@@ -111,7 +105,11 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
               </div>
               <div className={styles.packShine} />
             </div>
-            {phase === 'sealed' && <p className={styles.packHint}>Click to open!</p>}
+            {(phase === 'sealed' || phase === 'shaking') && (
+              <p className={styles.packHint}>
+                {phase === 'sealed' ? 'Click to open!' : ''}
+              </p>
+            )}
           </div>
         )}
 

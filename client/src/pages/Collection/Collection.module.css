@@ -101,7 +101,7 @@
 
 .modalContent {
   position: relative;
-  width: clamp(260px, 90vw, 340px);
+  width: clamp(300px, 85vw, 440px);
   animation: slide-up 0.25s ease;
 }
 

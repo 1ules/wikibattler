@@ -58,7 +58,7 @@ export function Collection() {
             >
               ✕
             </button>
-            <Card userCard={selectedCard} />
+            <Card userCard={selectedCard} large tilt />
           </div>
         </div>
       )}

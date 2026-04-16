@@ -10,6 +10,7 @@ import {
   fetchCategories,
   fetchPageviews,
   fetchWikiRankScore,
+  articleLengthToScore,
   type WikiSummary,
 } from './wikipedia.client.js';
 
@@ -30,44 +31,55 @@ export interface CardCreateData {
 
 function deriveStats(
   pageviews: number,
-  contentLength: number,
+  articleBytes: number,
   titleLength: number,
   rarity: Rarity
 ): { attack: number; health: number; speed: number } {
   const mult = RARITY_MULTIPLIERS[rarity];
 
+  // ATK — log scale on monthly pageviews (10 views→~50, 1k→~350, 100k→~700, 1M→~950)
   const rawAttack = pageviews > 0
-    ? Math.round((Math.log10(pageviews + 1) / Math.log10(2_000_001)) * 999) + 1
-    : 1;
+    ? Math.round((Math.log10(pageviews + 1) / Math.log10(2_000_000)) * 998) + 1
+    : 10; // articles with no view data still get a small base
 
-  const rawHealth = Math.round((Math.min(contentLength, 200_000) / 200_000) * 999) + 1;
-  const rawSpeed  = Math.min(titleLength, 100);
+  // HP — log scale on full article byte length (5k bytes→~150, 50k→~500, 500k→~999)
+  const rawHealth = articleBytes > 0
+    ? Math.round((Math.log10(articleBytes + 1) / Math.log10(600_000)) * 998) + 1
+    : 50;
+
+  // SPD — inverse of title length; short punchy titles = fast (len 5→100, len 50→~10)
+  const rawSpeed = Math.max(1, Math.round(800 / Math.max(titleLength, 2)));
 
   return {
-    attack: Math.min(Math.round(rawAttack  * mult), MAX_STAT_VALUE),
-    health: Math.min(Math.round(rawHealth  * mult), MAX_STAT_VALUE),
-    speed:  Math.min(Math.round(rawSpeed   * mult), MAX_STAT_VALUE),
+    attack: Math.min(Math.round(rawAttack * mult), MAX_STAT_VALUE),
+    health: Math.min(Math.round(rawHealth * mult), MAX_STAT_VALUE),
+    speed:  Math.min(Math.round(rawSpeed  * mult), MAX_STAT_VALUE),
   };
 }
 
 export async function buildCardFromArticle(summary: WikiSummary): Promise<CardCreateData> {
-  const [categories, pageviews, qualityScore] = await Promise.all([
+  const [categories, pageviews, wikiRankRaw] = await Promise.all([
     fetchCategories(summary.title),
     fetchPageviews(summary.title),
     fetchWikiRankScore(summary.title),
   ]);
 
+  // Use WikiRank if available; otherwise derive from article byte length
+  const articleBytes = summary.length ?? summary.extract.length * 8;
+  const qualityScore = wikiRankRaw >= 0
+    ? wikiRankRaw
+    : articleLengthToScore(articleBytes);
+
   const rarity = scoreToRarity(qualityScore);
-  const contentLength = summary.extract.length;
-  const titleLength   = summary.title.length;
-  const stats = deriveStats(pageviews, contentLength, titleLength, rarity);
+  const titleLength = summary.title.length;
+  const stats = deriveStats(pageviews, articleBytes, titleLength, rarity);
   const tags  = categoriesToTags(categories);
 
   return {
     wikiPageId:       summary.pageid,
     wikiTitle:        summary.title,
     wikiSlug:         summary.title.replace(/ /g, '_'),
-    wikiExtract:      summary.extract.slice(0, 500),
+    wikiExtract:      summary.extract.slice(0, 300),
     wikiThumbUrl:     summary.thumbnail?.source ?? null,
     wikiQualityScore: qualityScore,
     rarity,

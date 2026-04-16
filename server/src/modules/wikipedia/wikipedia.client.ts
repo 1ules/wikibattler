@@ -9,6 +9,7 @@ export interface WikiSummary {
   pageid: number;
   title: string;
   extract: string;
+  length?: number;           // full article byte length from Wikipedia
   thumbnail?: { source: string };
   content_urls: { desktop: { page: string } };
   description?: string;
@@ -59,8 +60,10 @@ export async function fetchCategories(title: string): Promise<string[]> {
 export async function fetchPageviews(title: string): Promise<number> {
   try {
     const slug = encodeURIComponent(title.replace(/ /g, '_'));
-    const now = new Date();
-    const yyyymm = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // Always use the previous completed month — current month has no data yet
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    const yyyymm = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
     const url = `${PAGEVIEWS}/en.wikipedia/all-access/all-agents/${slug}/monthly/${yyyymm}/${yyyymm}`;
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) return 0;
@@ -73,50 +76,28 @@ export async function fetchPageviews(title: string): Promise<number> {
 
 export async function fetchWikiRankScore(title: string): Promise<number> {
   try {
-    // WikiRank API: try their JSON endpoint for quality score
     const slug = encodeURIComponent(title.replace(/ /g, '_'));
     const res = await fetch(`${WIKIRANK}/en/${slug}`, {
       headers: { ...HEADERS, Accept: 'application/json' },
     });
-    if (!res.ok) return await fetchOresScore(title);
-
-    // WikiRank returns HTML by default; parse the quality score from JSON if available
+    if (!res.ok) return -1;
     const text = await res.text();
     const match = text.match(/"quality_score"\s*:\s*(\d+(?:\.\d+)?)/);
     if (match?.[1]) return Math.round(parseFloat(match[1]));
-
-    return await fetchOresScore(title);
+    return -1;
   } catch {
-    return await fetchOresScore(title);
+    return -1;
   }
 }
 
-async function fetchOresScore(title: string): Promise<number> {
-  try {
-    const slug = encodeURIComponent(title.replace(/ /g, '_'));
-    const res = await fetch(
-      `https://ores.wikimedia.org/v3/scores/enwiki?models=articlequality&titles=${slug}`,
-      { headers: HEADERS }
-    );
-    if (!res.ok) return 0;
-
-    const json = await res.json() as {
-      enwiki: { scores: Record<string, { articlequality?: { score?: { prediction?: string } } }> };
-    };
-    const scores = Object.values(json.enwiki?.scores ?? {});
-    const prediction = scores[0]?.articlequality?.score?.prediction;
-
-    // ORES classes map to our 0-100 scale
-    const oresMap: Record<string, number> = {
-      FA: 100, // Featured Article
-      GA: 88,  // Good Article
-      B: 72,
-      C: 50,
-      Start: 28,
-      Stub: 10,
-    };
-    return oresMap[prediction ?? ''] ?? 10;
-  } catch {
-    return 10;
-  }
+/** Derive a 0-100 quality score from article byte length when APIs fail.
+ *  Longer articles are generally higher quality on Wikipedia.
+ */
+export function articleLengthToScore(bytes: number): number {
+  if (bytes >= 150_000) return 90;
+  if (bytes >= 80_000)  return 80;
+  if (bytes >= 40_000)  return 60;
+  if (bytes >= 15_000)  return 35;
+  if (bytes >= 5_000)   return 20;
+  return 8;
 }

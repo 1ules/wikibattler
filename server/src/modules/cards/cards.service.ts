@@ -4,7 +4,7 @@ import type { PaginatedResponse } from '@wikibattler/shared';
 export async function getUserCollection(
   userId: string,
   page = 1,
-  pageSize = 20
+  pageSize = 500
 ): Promise<PaginatedResponse<object>> {
   const skip = (page - 1) * pageSize;
 

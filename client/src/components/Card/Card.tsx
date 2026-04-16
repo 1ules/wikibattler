@@ -10,6 +10,7 @@ interface CardProps {
   selected?: boolean;
   style?: React.CSSProperties;
   tilt?: boolean;
+  large?: boolean;
 }
 
 export function Card({
@@ -19,6 +20,7 @@ export function Card({
   selected = false,
   style,
   tilt = true,
+  large = false,
 }: CardProps) {
   const { card, isFoil } = userCard;
   const rarityInfo = RARITY_DISPLAY[card.rarity];
@@ -59,6 +61,7 @@ export function Card({
       ref={cardRef}
       className={[
         styles.card,
+        large ? styles.large : '',
         rarityBorderClass,
         foilClass,
         revealing ? styles.revealing : '',

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import type { PaginatedResponse, UserCard, ApiResponse } from '@wikibattler/shared';
 
-export function useCollection(page = 1, pageSize = 20) {
+export function useCollection(page = 1, pageSize = 500) {
   return useQuery({
     queryKey: ['cards', page, pageSize],
     queryFn: async () => {
