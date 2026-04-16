@@ -114,11 +114,13 @@ model UserCard {
 // ─── Pack System ──────────────────────────────────────────────────────────────
 
 model PackState {
-  userId       String   @id
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storedPacks  Int      @default(0)
-  nextPackAt   DateTime @default(now())
-  totalOpened  Int      @default(0)
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storedPacks      Int      @default(0)
+  nextPackAt       DateTime @default(now())
+  totalOpened      Int      @default(0)
+  pitySrAvailable  Int      @default(0)   // available SR/SSR pity packs (1 per 10 regular packs)
+  pityUrAvailable  Int      @default(0)   // available UR/MR pity packs (1 per 100 regular packs)
 }
 
 // ─── Battle System ────────────────────────────────────────────────────────────

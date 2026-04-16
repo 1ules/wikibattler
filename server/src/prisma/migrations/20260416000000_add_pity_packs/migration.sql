@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "PackState" ADD COLUMN "pitySrAvailable" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "PackState" ADD COLUMN "pityUrAvailable" INTEGER NOT NULL DEFAULT 0;

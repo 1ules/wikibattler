@@ -57,18 +57,26 @@ export async function fetchCategories(title: string): Promise<string[]> {
   return cats.map(c => c.title.replace(/^Category:/, '').trim());
 }
 
+/**
+ * Fetch all-time pageviews for a Wikipedia article by summing monthly data
+ * from July 2015 (earliest available) through last completed month.
+ * This gives a true popularity-of-all-time metric for ATK stat derivation.
+ */
 export async function fetchPageviews(title: string): Promise<number> {
   try {
     const slug = encodeURIComponent(title.replace(/ /g, '_'));
-    // Always use the previous completed month — current month has no data yet
+    // Start: 2015-07 (Wikimedia pageviews data begins July 2015)
+    const start = '2015070100';
+    // End: last completed month
     const d = new Date();
     d.setMonth(d.getMonth() - 1);
-    const yyyymm = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const url = `${PAGEVIEWS}/en.wikipedia/all-access/all-agents/${slug}/monthly/${yyyymm}/${yyyymm}`;
+    const end = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}0100`;
+    const url = `${PAGEVIEWS}/en.wikipedia/all-access/user/${slug}/monthly/${start}/${end}`;
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) return 0;
     const json = await res.json() as WikiPageviewsResponse;
-    return json.items?.[0]?.views ?? 0;
+    // Sum all monthly view counts for all-time total
+    return (json.items ?? []).reduce((sum, item) => sum + item.views, 0);
   } catch {
     return 0;
   }

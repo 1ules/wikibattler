@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
 import { useCollection } from '../../api/useCards.js';
-import { useOpenPack, usePackState } from '../../api/usePacks.js';
+import { useOpenPack, usePackState, useOpenPityPack } from '../../api/usePacks.js';
 import { Card } from '../../components/Card/Card.js';
 import { PackOpener } from '../../components/PackOpener/PackOpener.js';
 import { usePackStore } from '../../stores/packStore.js';
 import type { UserCard } from '@wikibattler/shared';
+import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD } from '@wikibattler/shared';
 import styles from './Collection.module.css';
 
 export function Collection() {
   const { data: collection, isLoading } = useCollection();
-  const { storedPacks, secondsUntilNext } = usePackStore();
+  const {
+    storedPacks,
+    secondsUntilNext,
+    pitySrAvailable,
+    pityUrAvailable,
+    pitySrProgress,
+    pityUrProgress,
+  } = usePackStore();
+
   const openPack = useOpenPack();
+  const openPityPack = useOpenPityPack();
   const [pendingCards, setPendingCards] = useState<UserCard[] | null>(null);
   const [selectedCard, setSelectedCard] = useState<UserCard | null>(null);
 
@@ -21,7 +31,16 @@ export function Collection() {
       const result = await openPack.mutateAsync();
       setPendingCards(result.cards as UserCard[]);
     } catch {
-      // 409 = no packs available (store already up to date); silently ignore
+      // 409 = no packs available; silently ignore
+    }
+  }
+
+  async function handleOpenPityPack(tier: 'SR' | 'UR') {
+    try {
+      const result = await openPityPack.mutateAsync(tier);
+      setPendingCards([result.card as UserCard]);
+    } catch {
+      // ignore
     }
   }
 
@@ -31,6 +50,9 @@ export function Collection() {
 
   const mm = Math.floor(secondsUntilNext / 60).toString().padStart(2, '0');
   const ss = (secondsUntilNext % 60).toString().padStart(2, '0');
+
+  const srPct = (pitySrProgress / PITY_SR_THRESHOLD) * 100;
+  const urPct = (pityUrProgress / PITY_UR_THRESHOLD) * 100;
 
   return (
     <div className={styles.page}>
@@ -63,6 +85,7 @@ export function Collection() {
         </div>
       )}
 
+      {/* Page header */}
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Collection</h1>
         <div className={styles.packControls}>
@@ -81,6 +104,85 @@ export function Collection() {
         </div>
       </div>
 
+      {/* ── Pity Tracker ── */}
+      <section className={styles.pitySection} aria-label="Pity pack tracker">
+        <h2 className={styles.pitySectionTitle}>Pity Packs</h2>
+        <div className={styles.pityRows}>
+
+          {/* SR / SSR pity row */}
+          <div className={styles.pityRow}>
+            <div className={styles.pityLabel}>
+              <span className={styles.pityLabelTitle}>
+                SR / SSR
+                {pitySrAvailable > 0 && (
+                  <span className={styles.pityBadge + ' ' + styles.pityBadgeSr}>
+                    {pitySrAvailable}
+                  </span>
+                )}
+              </span>
+              <span className={styles.pityLabelSub}>
+                Every {PITY_SR_THRESHOLD} packs · 50/50 SR or SSR
+              </span>
+            </div>
+            <div className={styles.pityBarWrap}>
+              <div className={styles.pityBarTrack}>
+                <div
+                  className={`${styles.pityBarFill} ${styles.pityBarFillSr}`}
+                  style={{ width: `${srPct}%` }}
+                />
+              </div>
+              <span className={styles.pityBarLabel}>
+                {pitySrProgress} / {PITY_SR_THRESHOLD} packs
+              </span>
+            </div>
+            <button
+              className={`${styles.pityOpenBtn} ${styles.pityOpenBtnSr}`}
+              disabled={pitySrAvailable < 1 || openPityPack.isPending}
+              onClick={() => handleOpenPityPack('SR')}
+            >
+              {pitySrAvailable > 0 ? `Open (${pitySrAvailable})` : 'Not yet'}
+            </button>
+          </div>
+
+          {/* UR / MR pity row */}
+          <div className={styles.pityRow}>
+            <div className={styles.pityLabel}>
+              <span className={styles.pityLabelTitle}>
+                UR / MR
+                {pityUrAvailable > 0 && (
+                  <span className={styles.pityBadge + ' ' + styles.pityBadgeUr}>
+                    {pityUrAvailable}
+                  </span>
+                )}
+              </span>
+              <span className={styles.pityLabelSub}>
+                Every {PITY_UR_THRESHOLD} packs · 50/50 UR or MR
+              </span>
+            </div>
+            <div className={styles.pityBarWrap}>
+              <div className={styles.pityBarTrack}>
+                <div
+                  className={`${styles.pityBarFill} ${styles.pityBarFillUr}`}
+                  style={{ width: `${urPct}%` }}
+                />
+              </div>
+              <span className={styles.pityBarLabel}>
+                {pityUrProgress} / {PITY_UR_THRESHOLD} packs
+              </span>
+            </div>
+            <button
+              className={`${styles.pityOpenBtn} ${styles.pityOpenBtnUr}`}
+              disabled={pityUrAvailable < 1 || openPityPack.isPending}
+              onClick={() => handleOpenPityPack('UR')}
+            >
+              {pityUrAvailable > 0 ? `Open (${pityUrAvailable})` : 'Not yet'}
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Collection grid */}
       {isLoading ? (
         <div className={styles.loadingGrid}>
           {Array.from({ length: 12 }, (_, i) => (

@@ -87,6 +87,154 @@
   color: var(--color-accent);
 }
 
+/* ─── Pity Tracker ───────────────────────────────────────────────────────── */
+.pitySection {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pitySectionTitle {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.pityRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pityRow {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+@media (max-width: 600px) {
+  .pityRow { grid-template-columns: 1fr; gap: var(--space-2); }
+}
+
+.pityLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pityLabelTitle {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.pityLabelSub {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+
+.pityBarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pityBarTrack {
+  height: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.pityBarFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.pityBarFillSr {
+  background: linear-gradient(90deg, var(--rarity-sr), var(--rarity-ssr));
+}
+
+.pityBarFillUr {
+  background: linear-gradient(90deg, var(--rarity-ur), var(--rarity-mr));
+}
+
+.pityBarLabel {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pityOpenBtn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.pityOpenBtnSr {
+  background: linear-gradient(135deg, var(--rarity-sr), var(--rarity-ssr));
+  color: #1a0a00;
+  box-shadow: 0 2px 12px rgba(251,146,60,0.4);
+}
+.pityOpenBtnSr:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(251,146,60,0.55);
+}
+
+.pityOpenBtnUr {
+  background: linear-gradient(135deg, var(--rarity-ur), var(--rarity-mr));
+  color: #0e0820;
+  box-shadow: 0 2px 12px rgba(251,191,36,0.4);
+}
+.pityOpenBtnUr:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(192,132,252,0.55);
+}
+
+.pityOpenBtn:disabled {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.pityBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 0 5px;
+  margin-left: var(--space-1);
+}
+
+.pityBadgeSr {
+  background: rgba(251,146,60,0.2);
+  color: var(--rarity-sr);
+  border: 1px solid rgba(251,146,60,0.4);
+}
+
+.pityBadgeUr {
+  background: rgba(251,191,36,0.2);
+  color: var(--rarity-ur);
+  border: 1px solid rgba(251,191,36,0.4);
+}
+
 /* ─── Card Detail Modal ───────────────────────────────────────────────────── */
 .modalOverlay {
   position: fixed;

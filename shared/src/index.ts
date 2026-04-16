@@ -38,7 +38,11 @@ export {
   BASE_ELO_RATING,
   GUEST_CARD_LIMIT,
   MARKET_LISTING_DURATION_DAYS,
+  PITY_SR_THRESHOLD,
+  PITY_UR_THRESHOLD,
+  PACK_SLOT_RATES,
 } from './constants/game.js';
+export type { RarityRates } from './constants/game.js';
 export { SYNERGY_RULES } from './constants/synergy-rules.js';
 export { CATEGORY_TAG_RULES, categoriesToTags } from './constants/category-tag-map.js';
 
