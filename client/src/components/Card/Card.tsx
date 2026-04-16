@@ -26,6 +26,16 @@ export function Card({
   const rarityInfo = RARITY_DISPLAY[card.rarity];
   const cardRef = useRef<HTMLElement>(null);
 
+  /** First sentence of the extract, hard-capped at 10 words with ellipsis */
+  const displayDesc = React.useMemo(() => {
+    if (!card.wikiExtract) return '';
+    const dot = card.wikiExtract.search(/[.!?]/);
+    const sentence = dot > 0 ? card.wikiExtract.slice(0, dot) : card.wikiExtract;
+    const words = sentence.trim().split(/\s+/);
+    if (words.length <= 10) return sentence.trim();
+    return words.slice(0, 10).join(' ') + '…';
+  }, [card.wikiExtract]);
+
   const foilClass =
     isFoil && card.rarity === 'MR'  ? styles['foil-mr']  :
     isFoil && card.rarity === 'SSR' ? styles['foil-ssr'] :
@@ -118,8 +128,8 @@ export function Card({
       </div>
 
       {/* Description */}
-      {card.wikiExtract && (
-        <p className={styles.description}>{card.wikiExtract}</p>
+      {displayDesc && (
+        <p className={styles.description}>{displayDesc}</p>
       )}
 
       {/* Tags */}

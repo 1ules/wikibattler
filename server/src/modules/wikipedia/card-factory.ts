@@ -57,6 +57,16 @@ function deriveStats(
   };
 }
 
+/** Extract first sentence from Wikipedia extract, hard-cap at maxWords. */
+function firstSentence(text: string, maxWords = 10): string {
+  if (!text) return '';
+  const dot = text.search(/[.!?]/);
+  const sentence = dot > 0 ? text.slice(0, dot) : text;
+  const words = sentence.trim().split(/\s+/);
+  if (words.length <= maxWords) return sentence.trim();
+  return words.slice(0, maxWords).join(' ') + '\u2026'; // …
+}
+
 export async function buildCardFromArticle(summary: WikiSummary): Promise<CardCreateData> {
   const [categories, pageviews, wikiRankRaw] = await Promise.all([
     fetchCategories(summary.title),
@@ -79,7 +89,7 @@ export async function buildCardFromArticle(summary: WikiSummary): Promise<CardCr
     wikiPageId:       summary.pageid,
     wikiTitle:        summary.title,
     wikiSlug:         summary.title.replace(/ /g, '_'),
-    wikiExtract:      summary.extract.slice(0, 300),
+    wikiExtract:      firstSentence(summary.extract, 10),
     wikiThumbUrl:     summary.thumbnail?.source ?? null,
     wikiQualityScore: qualityScore,
     rarity,
