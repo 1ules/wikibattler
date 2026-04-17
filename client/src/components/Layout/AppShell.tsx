@@ -1,13 +1,19 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { PackTimer } from '../Timer/PackTimer.js';
 import { useAuthStore } from '../../stores/authStore.js';
+import { usePackState } from '../../api/usePacks.js';
 import styles from './AppShell.module.css';
+
+function PackStateSync() {
+  usePackState();
+  return null;
+}
 
 export function AppShell() {
   const { isGuest, isAuthenticated } = useAuthStore();
 
   return (
     <div className={styles.shell}>
+      {isAuthenticated && <PackStateSync />}
       <header className={styles.header}>
         <span className={styles.logo}>WikiBattler</span>
 
@@ -21,9 +27,7 @@ export function AppShell() {
           <NavLink to="/leaderboard" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Ranks</NavLink>
         </nav>
 
-        <div className={styles.headerRight}>
-          {isAuthenticated && <PackTimer />}
-        </div>
+        <div className={styles.headerRight} />
       </header>
 
       <main className={styles.main}>

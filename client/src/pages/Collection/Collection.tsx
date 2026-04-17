@@ -1,14 +1,15 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useCollection } from '../../api/useCards.js';
 import { useOpenPack, usePackState, useOpenPityPack } from '../../api/usePacks.js';
 import { Card } from '../../components/Card/Card.js';
 import { PackOpener } from '../../components/PackOpener/PackOpener.js';
 import { usePackStore } from '../../stores/packStore.js';
+import { useAuthStore } from '../../stores/authStore.js';
 import { api } from '../../lib/api.js';
-import type { UserCard } from '@wikibattler/shared';
+import type { UserCard, ApiResponse } from '@wikibattler/shared';
 import type { QidNode } from '@wikibattler/shared';
-import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST } from '@wikibattler/shared';
+import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS } from '@wikibattler/shared';
 import styles from './Collection.module.css';
 
 const ALL_RARITIES = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'] as const;
@@ -16,6 +17,34 @@ const RARITY_IDX = Object.fromEntries(ALL_RARITIES.map((r, i) => [r, i]));
 
 type SortField = 'total' | 'atk' | 'hp' | 'spd' | 'name' | 'rarity' | 'acquired';
 type SortDir   = 'desc' | 'asc';
+
+interface MeData { id: string; isGuest: boolean; username: string | null; coins: number; rating: number; }
+
+const BG_PRESETS = [
+  { id: 'default', label: 'Default', gradient: 'linear-gradient(135deg,#1e1535 0%,#0f0c1a 100%)' },
+  { id: 'ocean',   label: 'Ocean',   gradient: 'linear-gradient(135deg,#0a1a2e 0%,#071520 100%)' },
+  { id: 'ember',   label: 'Ember',   gradient: 'linear-gradient(135deg,#2a0f0c 0%,#1a0805 100%)' },
+  { id: 'forest',  label: 'Forest',  gradient: 'linear-gradient(135deg,#0a2118 0%,#051a0a 100%)' },
+  { id: 'cosmic',  label: 'Cosmic',  gradient: 'linear-gradient(135deg,#1a0a2e 0%,#0f0518 100%)' },
+] as const;
+
+const RANK_TIERS: readonly { min: number; label: string }[] = [
+  { min: 2000, label: 'Diamond I' },  { min: 1800, label: 'Diamond II' },
+  { min: 1600, label: 'Diamond III' }, { min: 1400, label: 'Platinum I' },
+  { min: 1200, label: 'Platinum II' }, { min: 1000, label: 'Gold I' },
+  { min: 800,  label: 'Gold II' },    { min: 600,  label: 'Gold III' },
+  { min: 400,  label: 'Silver I' },   { min: 200,  label: 'Silver II' },
+  { min: 100,  label: 'Silver III' }, { min: 0,    label: 'Bronze V' },
+];
+
+function getRank(rating: number): string {
+  return RANK_TIERS.find(t => rating >= t.min)?.label ?? 'Bronze V';
+}
+
+function getGhostCode(userId: string): string {
+  const clean = userId.replace(/-/g, '').toUpperCase().slice(0, 8);
+  return `${clean.slice(0, 4)}-${clean.slice(4, 8)}`;
+}
 
 function modalQidTags(chain: QidNode[]): QidNode[] {
   const seen = new Set<string>();
@@ -77,6 +106,34 @@ export function Collection() {
   const traitBtnRef     = useRef<HTMLButtonElement>(null);
 
   usePackState();
+
+  const { userId } = useAuthStore();
+  const { data: me } = useQuery<MeData>({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<MeData>>('/auth/me');
+      return data.data;
+    },
+    staleTime: 30_000,
+  });
+
+  // Profile state
+  const [profileDisplayName, setProfileDisplayName] = useState(() => localStorage.getItem('wb-display-name') ?? '');
+  const [profileTitle, setProfileTitle]             = useState(() => localStorage.getItem('wb-title') ?? 'Wanderer');
+  const [profileSubtitle, setProfileSubtitle]       = useState(() => localStorage.getItem('wb-subtitle') ?? 'Just starting out');
+  const [profileBg, setProfileBg]                   = useState(() => localStorage.getItem('wb-bg') ?? 'default');
+  const [ghostTeamIds, setGhostTeamIds]             = useState<(string | null)[]>(() => {
+    try { const s = localStorage.getItem('wb-ghost-team'); return s ? (JSON.parse(s) as (string|null)[]) : [null,null,null,null,null]; }
+    catch { return [null, null, null, null, null]; }
+  });
+  const [isEditing, setIsEditing]             = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editTitle, setEditTitle]             = useState('');
+  const [editSubtitle, setEditSubtitle]       = useState('');
+  const [editBg, setEditBg]                   = useState('default');
+  const [editTeamIds, setEditTeamIds]         = useState<(string | null)[]>([null,null,null,null,null]);
+  const [activeSlot, setActiveSlot]           = useState<number | null>(null);
+  const [ghostCodeCopied, setGhostCodeCopied] = useState(false);
 
   // Close trait popover on outside click
   useEffect(() => {
@@ -147,6 +204,24 @@ export function Collection() {
     return result;
   }, [collection?.data, search, enabledRarities, foilOnly, sortField, sortDir, selectedTraits]);
 
+  const ghostTeamCards = useMemo<(UserCard | null)[]>(() => {
+    if (!collection?.data) return ghostTeamIds.map(() => null);
+    const byId = new Map((collection.data as UserCard[]).map(uc => [uc.id, uc]));
+    return ghostTeamIds.map(id => (id ? (byId.get(id) ?? null) : null));
+  }, [collection?.data, ghostTeamIds]);
+
+  const editTeamCards = useMemo<(UserCard | null)[]>(() => {
+    if (!collection?.data) return editTeamIds.map(() => null);
+    const byId = new Map((collection.data as UserCard[]).map(uc => [uc.id, uc]));
+    return editTeamIds.map(id => (id ? (byId.get(id) ?? null) : null));
+  }, [collection?.data, editTeamIds]);
+
+  const editableCards = useMemo<UserCard[]>(() => {
+    if (!collection?.data) return [];
+    const inTeam = new Set(editTeamIds.filter(Boolean));
+    return (collection.data as UserCard[]).filter(uc => !inTeam.has(uc.id));
+  }, [collection?.data, editTeamIds]);
+
   function toggleRarity(rarity: string) {
     setEnabledRarities(prev => {
       const allOn = prev.size === ALL_RARITIES.length;
@@ -174,6 +249,64 @@ export function Collection() {
     setSortDir('desc');
     setSelectedTraits(new Set());
     setTraitSearch('');
+  }
+
+  const displayName = profileDisplayName || me?.username || 'Player';
+  const ghostCode   = userId ? getGhostCode(userId) : 'XXXX-XXXX';
+  const currentBg   = BG_PRESETS.find(p => p.id === profileBg)?.gradient ?? BG_PRESETS[0]!.gradient;
+  const previewBg   = BG_PRESETS.find(p => p.id === editBg)?.gradient ?? BG_PRESETS[0]!.gradient;
+
+  function startEditing() {
+    setEditDisplayName(displayName === 'Player' ? '' : displayName);
+    setEditTitle(profileTitle);
+    setEditSubtitle(profileSubtitle);
+    setEditBg(profileBg);
+    setEditTeamIds([...ghostTeamIds]);
+    setActiveSlot(null);
+    setIsEditing(true);
+  }
+
+  function saveProfile() {
+    const name = editDisplayName.trim();
+    localStorage.setItem('wb-display-name', name);
+    localStorage.setItem('wb-title', editTitle.trim() || 'Wanderer');
+    localStorage.setItem('wb-subtitle', editSubtitle.trim());
+    localStorage.setItem('wb-bg', editBg);
+    localStorage.setItem('wb-ghost-team', JSON.stringify(editTeamIds));
+    setProfileDisplayName(name);
+    setProfileTitle(editTitle.trim() || 'Wanderer');
+    setProfileSubtitle(editSubtitle.trim());
+    setProfileBg(editBg);
+    setGhostTeamIds(editTeamIds);
+    setIsEditing(false);
+    setActiveSlot(null);
+  }
+
+  function cancelEditing() { setIsEditing(false); setActiveSlot(null); }
+
+  function handleSlotClick(idx: number) {
+    if (!isEditing) return;
+    if (editTeamIds[idx]) {
+      const next = [...editTeamIds]; next[idx] = null; setEditTeamIds(next);
+      if (activeSlot === idx) setActiveSlot(null);
+    } else {
+      setActiveSlot(prev => prev === idx ? null : idx);
+    }
+  }
+
+  function handlePickCard(uc: UserCard) {
+    if (activeSlot === null) return;
+    const next = [...editTeamIds]; next[activeSlot] = uc.id; setEditTeamIds(next);
+    const nextEmpty = next.findIndex((id, i) => i > activeSlot && !id);
+    setActiveSlot(nextEmpty === -1 ? null : nextEmpty);
+  }
+
+  async function copyGhostCode() {
+    try {
+      await navigator.clipboard.writeText(ghostCode);
+      setGhostCodeCopied(true);
+      setTimeout(() => setGhostCodeCopied(false), 2000);
+    } catch { /* ignore */ }
   }
 
   const hasActiveFilters =
@@ -283,10 +416,14 @@ export function Collection() {
     } catch { /* user cancelled share */ }
   }
 
-  const mm = Math.floor(secondsUntilNext / 60).toString().padStart(2, '0');
-  const ss = (secondsUntilNext % 60).toString().padStart(2, '0');
-  const srPct = (pitySrProgress / PITY_SR_THRESHOLD) * 100;
-  const urPct = (pityUrProgress / PITY_UR_THRESHOLD) * 100;
+  const packRingPct = storedPacks >= 1
+    ? Math.round((storedPacks / MAX_STORED_PACKS) * 100)
+    : Math.round((1 - secondsUntilNext / PACK_COOLDOWN_SECONDS) * 100);
+  const packRingInner = storedPacks === 0
+    ? `${String(Math.floor(secondsUntilNext / 60)).padStart(2,'0')}:${String(secondsUntilNext % 60).padStart(2,'0')}`
+    : String(storedPacks);
+  const srRingPct = Math.round((pitySrProgress / PITY_SR_THRESHOLD) * 100);
+  const urRingPct = Math.round((pityUrProgress / PITY_UR_THRESHOLD) * 100);
 
   return (
     <div className={styles.page}>
@@ -373,85 +510,171 @@ export function Collection() {
       {/* ── Page header ── */}
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Collection</h1>
-        <div className={styles.packControls}>
-          {storedPacks < 1 && secondsUntilNext > 0 && (
-            <span className={styles.packTimer}>
-              Next pack in <span className={styles.countdown}>{mm}:{ss}</span>
-            </span>
-          )}
-          <button
-            className={styles.openPackBtn}
-            onClick={handleOpenPack}
-            disabled={storedPacks < 1}
+        <div className={styles.packRings}>
+          {/* Pack ring */}
+          <div
+            className={[styles.ringWrap, storedPacks >= 1 ? styles.ringWrapReady : ''].filter(Boolean).join(' ')}
+            onClick={storedPacks >= 1 ? handleOpenPack : undefined}
+            role={storedPacks >= 1 ? 'button' : undefined}
+            tabIndex={storedPacks >= 1 ? 0 : undefined}
+            onKeyDown={e => e.key === 'Enter' && storedPacks >= 1 && handleOpenPack()}
+            aria-label={storedPacks >= 1 ? `Open pack (${storedPacks} available)` : 'Waiting for next pack'}
           >
-            {`Open Pack (${storedPacks})`}
-          </button>
+            <div className={styles.ringCircle} style={{ '--ring-pct': `${packRingPct}%`, '--ring-color': storedPacks >= 1 ? '#4ade80' : 'var(--color-accent)' } as React.CSSProperties}>
+              <div className={styles.ringInner}><span className={styles.ringValue}>{packRingInner}</span></div>
+            </div>
+            <span className={styles.ringLabel}>Open Pack</span>
+            <span className={styles.ringCount}>{storedPacks}/{MAX_STORED_PACKS}</span>
+          </div>
+
+          {/* SR/SSR pity ring */}
+          <div
+            className={[styles.ringWrap, styles.ringWrapSm, pitySrAvailable > 0 ? styles.ringWrapReady : ''].filter(Boolean).join(' ')}
+            onClick={pitySrAvailable > 0 ? () => handleOpenPityPack('SR') : undefined}
+            role={pitySrAvailable > 0 ? 'button' : undefined}
+            tabIndex={pitySrAvailable > 0 ? 0 : undefined}
+            aria-label={`SR/SSR pity: ${pitySrProgress}/${PITY_SR_THRESHOLD}`}
+          >
+            <div className={styles.ringCircleSm} style={{ '--ring-pct': `${srRingPct}%`, '--ring-color': pitySrAvailable > 0 ? '#fbbf24' : '#fb923c' } as React.CSSProperties}>
+              <div className={styles.ringInnerSm}><span className={styles.ringValueSm}>{pitySrAvailable > 0 ? '!' : pitySrProgress}</span></div>
+            </div>
+            <span className={styles.ringLabel}>SR/SSR</span>
+            <span className={styles.ringCount}>{pitySrProgress}/{PITY_SR_THRESHOLD}</span>
+          </div>
+
+          {/* UR/MR pity ring */}
+          <div
+            className={[styles.ringWrap, styles.ringWrapSm, pityUrAvailable > 0 ? styles.ringWrapReady : ''].filter(Boolean).join(' ')}
+            onClick={pityUrAvailable > 0 ? () => handleOpenPityPack('UR') : undefined}
+            role={pityUrAvailable > 0 ? 'button' : undefined}
+            tabIndex={pityUrAvailable > 0 ? 0 : undefined}
+            aria-label={`UR/MR pity: ${pityUrProgress}/${PITY_UR_THRESHOLD}`}
+          >
+            <div className={styles.ringCircleSm} style={{ '--ring-pct': `${urRingPct}%`, '--ring-color': pityUrAvailable > 0 ? '#c084fc' : '#fbbf24' } as React.CSSProperties}>
+              <div className={styles.ringInnerSm}><span className={styles.ringValueSm}>{pityUrAvailable > 0 ? '!' : pityUrProgress}</span></div>
+            </div>
+            <span className={styles.ringLabel}>UR/MR</span>
+            <span className={styles.ringCount}>{pityUrProgress}/{PITY_UR_THRESHOLD}</span>
+          </div>
         </div>
       </div>
 
-      {/* ── Pity Tracker ── */}
-      <section className={styles.pitySection} aria-label="Pity pack tracker">
-        <h2 className={styles.pitySectionTitle}>Pity Packs</h2>
-        <div className={styles.pityRows}>
+      {/* ── Profile / Ghost ── */}
+      <section
+        className={[styles.profileSection, isEditing ? styles.profileEditing : ''].filter(Boolean).join(' ')}
+        style={{ '--profile-bg': isEditing ? previewBg : currentBg } as React.CSSProperties}
+        aria-label="Player profile"
+      >
+        <button className={styles.profileEditBtn} onClick={isEditing ? saveProfile : startEditing} title={isEditing ? 'Save' : 'Edit'}>
+          {isEditing ? '✓' : '✎'}
+        </button>
+        {isEditing && <button className={styles.profileCancelBtn} onClick={cancelEditing}>✕</button>}
 
-          <div className={styles.pityRow}>
-            <div className={styles.pityLabel}>
-              <span className={styles.pityLabelTitle}>
-                SR / SSR
-                {pitySrAvailable > 0 && (
-                  <span className={`${styles.pityBadge} ${styles.pityBadgeSr}`}>
-                    {pitySrAvailable}
-                  </span>
-                )}
-              </span>
-              <span className={styles.pityLabelSub}>
-                Every {PITY_SR_THRESHOLD} packs · 50/50 SR or SSR
-              </span>
-            </div>
-            <div className={styles.pityBarWrap}>
-              <div className={styles.pityBarTrack}>
-                <div className={`${styles.pityBarFill} ${styles.pityBarFillSr}`} style={{ width: `${srPct}%` }} />
-              </div>
-              <span className={styles.pityBarLabel}>{pitySrProgress} / {PITY_SR_THRESHOLD} packs</span>
-            </div>
-            <button
-              className={`${styles.pityOpenBtn} ${styles.pityOpenBtnSr}`}
-              disabled={pitySrAvailable < 1 || openPityPack.isPending}
-              onClick={() => handleOpenPityPack('SR')}
-            >
-              {pitySrAvailable > 0 ? `Open (${pitySrAvailable})` : 'Not yet'}
+        {/* Identity + ghost code */}
+        <div className={styles.profileTop}>
+          <div className={styles.profileIdentity}>
+            {isEditing ? (
+              <>
+                <input className={styles.editNameInput} value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)} placeholder="Display name" maxLength={32} />
+                <div className={styles.editTitleRow}>
+                  <input className={styles.editTitleInput} value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="Title" maxLength={32} />
+                  <input className={styles.editSubInput} value={editSubtitle} onChange={e => setEditSubtitle(e.target.value)} placeholder="Subtitle" maxLength={64} />
+                </div>
+              </>
+            ) : (
+              <>
+                <span className={styles.profileName}>{displayName}</span>
+                <div className={styles.profileTitleRow}>
+                  <span className={styles.profileTitle}>{profileTitle}</span>
+                  {profileSubtitle && <span className={styles.profileSubtitle}>· {profileSubtitle}</span>}
+                </div>
+              </>
+            )}
+          </div>
+          <div className={styles.ghostCodeBlock}>
+            <span className={styles.ghostCodeLabel}>Ghost Code</span>
+            <button className={styles.ghostCodeBtn} onClick={copyGhostCode} title="Copy ghost code">
+              {ghostCode} <span className={styles.ghostCopyIcon}>{ghostCodeCopied ? '✓' : '⎘'}</span>
             </button>
           </div>
+        </div>
 
-          <div className={styles.pityRow}>
-            <div className={styles.pityLabel}>
-              <span className={styles.pityLabelTitle}>
-                UR / MR
-                {pityUrAvailable > 0 && (
-                  <span className={`${styles.pityBadge} ${styles.pityBadgeUr}`}>
-                    {pityUrAvailable}
-                  </span>
+        {/* Team slots */}
+        <div className={styles.ghostTeamWrap}>
+          <span className={styles.ghostTeamLabel}>Ghost Team</span>
+          <div className={styles.ghostTeamSlots}>
+            {(isEditing ? editTeamCards : ghostTeamCards).map((uc, i) => (
+              <div
+                key={i}
+                className={[
+                  styles.ghostSlot,
+                  isEditing ? styles.ghostSlotEditable : '',
+                  isEditing && activeSlot === i ? styles.ghostSlotActive : '',
+                  uc ? styles.ghostSlotFilled : '',
+                ].filter(Boolean).join(' ')}
+                onClick={() => handleSlotClick(i)}
+                role={isEditing ? 'button' : undefined}
+                tabIndex={isEditing ? 0 : undefined}
+              >
+                {uc ? (
+                  <>
+                    {uc.card.wikiThumbUrl
+                      ? <img className={styles.ghostSlotImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} />
+                      : <div className={styles.ghostSlotImgFallback}>{uc.card.wikiTitle.slice(0, 2)}</div>}
+                    <span className={styles.ghostSlotRarity} style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}>{uc.card.rarity}</span>
+                    {isEditing && <span className={styles.ghostSlotRemove}>✕</span>}
+                  </>
+                ) : (
+                  <span className={styles.ghostSlotPlus}>{isEditing ? '+' : '·'}</span>
                 )}
-              </span>
-              <span className={styles.pityLabelSub}>
-                Every {PITY_UR_THRESHOLD} packs · 50/50 UR or MR
-              </span>
-            </div>
-            <div className={styles.pityBarWrap}>
-              <div className={styles.pityBarTrack}>
-                <div className={`${styles.pityBarFill} ${styles.pityBarFillUr}`} style={{ width: `${urPct}%` }} />
               </div>
-              <span className={styles.pityBarLabel}>{pityUrProgress} / {PITY_UR_THRESHOLD} packs</span>
-            </div>
-            <button
-              className={`${styles.pityOpenBtn} ${styles.pityOpenBtnUr}`}
-              disabled={pityUrAvailable < 1 || openPityPack.isPending}
-              onClick={() => handleOpenPityPack('UR')}
-            >
-              {pityUrAvailable > 0 ? `Open (${pityUrAvailable})` : 'Not yet'}
-            </button>
+            ))}
           </div>
+        </div>
 
+        {/* Card picker — shown when a slot is active in edit mode */}
+        {isEditing && activeSlot !== null && (
+          <div className={styles.editCardPicker}>
+            <span className={styles.editPickerLabel}>Pick card for slot {activeSlot + 1}</span>
+            <div className={styles.editPickerGrid}>
+              {editableCards.map(uc => (
+                <button key={uc.id} className={styles.editPickerCard} onClick={() => handlePickCard(uc)} title={uc.card.wikiTitle}>
+                  {uc.card.wikiThumbUrl
+                    ? <img className={styles.editPickerImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} loading="lazy" />
+                    : <div className={styles.editPickerImgFallback}>{uc.card.wikiTitle.slice(0, 2)}</div>}
+                  <span className={styles.editPickerRarity} style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}>{uc.card.rarity}</span>
+                  <span className={styles.editPickerName}>{uc.card.wikiTitle}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Background picker */}
+        {isEditing && (
+          <div className={styles.editBgPicker}>
+            {BG_PRESETS.map(p => (
+              <button key={p.id} className={[styles.editBgSwatch, editBg === p.id ? styles.editBgSwatchActive : ''].filter(Boolean).join(' ')} style={{ background: p.gradient }} onClick={() => setEditBg(p.id)} title={p.label} aria-label={p.label} />
+            ))}
+          </div>
+        )}
+
+        {/* Stats row */}
+        <div className={styles.profileStats}>
+          <div className={styles.profileStat}>
+            <span className={styles.profileStatVal}>{getRank(me?.rating ?? 0)}</span>
+            <span className={styles.profileStatLbl}>Rank</span>
+          </div>
+          <div className={styles.profileStatDivider} />
+          <div className={styles.profileStat}>
+            <span className={styles.profileStatVal}>0</span>
+            <span className={styles.profileStatLbl}>Raid Lvl</span>
+          </div>
+          <div className={styles.profileStatDivider} />
+          <div className={styles.profileStat}>
+            <span className={styles.profileStatVal}>{(me?.coins ?? 0).toLocaleString()}</span>
+            <span className={styles.profileStatLbl}>Coins</span>
+          </div>
         </div>
       </section>
 

@@ -18,27 +18,404 @@
   letter-spacing: -0.03em;
 }
 
-.openPackBtn {
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-lg);
-  background: var(--color-accent);
-  color: white;
+/* ─── Pack Rings ─────────────────────────────────────────────────────────── */
+.packRings {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.ringWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+  user-select: none;
+}
+
+.ringWrapReady { cursor: pointer; }
+.ringWrapReady:hover .ringCircle,
+.ringWrapReady:hover .ringCircleSm {
+  filter: brightness(1.15);
+}
+.ringWrapReady { animation: pulse-ring 1.8s ease-in-out infinite; }
+
+.ringWrapSm { gap: 3px; }
+
+.ringCircle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring-color, var(--color-accent)) var(--ring-pct, 0%), rgba(255,255,255,0.06) 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringInner {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringValue {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ringCircleSm {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring-color, #fb923c) var(--ring-pct, 0%), rgba(255,255,255,0.06) 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringInnerSm {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringValueSm {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ringLabel {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ringCount {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Profile / Ghost Section ────────────────────────────────────────────── */
+.profileSection {
+  background: var(--profile-bg, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-6);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  transition: background 0.4s ease;
+}
+
+.profileEditing {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px rgba(124,58,237,0.25);
+}
+
+.profileEditBtn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.profileEditBtn:hover { background: rgba(255,255,255,0.13); color: var(--color-text); }
+
+.profileCancelBtn {
+  position: absolute;
+  top: var(--space-3);
+  right: calc(var(--space-3) + 40px);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.profileCancelBtn:hover { background: rgba(220,38,38,0.15); color: #f87171; border-color: #f87171; }
+
+.profileTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding-right: 80px; /* avoid overlap with edit buttons */
+}
+
+.profileIdentity { display: flex; flex-direction: column; gap: var(--space-1); }
+
+.profileName {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.profileTitleRow { display: flex; align-items: center; gap: var(--space-2); }
+
+.profileTitle {
+  font-size: 0.78rem;
   font-weight: 700;
-  font-size: 0.95rem;
-  transition: background var(--transition-fast), transform var(--transition-fast);
+  color: var(--color-accent);
+}
+
+.profileSubtitle {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.ghostCodeBlock { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+.ghostCodeLabel {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.ghostCodeBtn {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md);
+  padding: 4px 10px;
+  transition: background var(--transition-fast);
+  letter-spacing: 0.08em;
+}
+.ghostCodeBtn:hover { background: rgba(255,255,255,0.1); }
+
+.ghostCopyIcon { font-size: 0.8rem; color: var(--color-text-muted); }
+
+/* Ghost team */
+.ghostTeamWrap { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.ghostTeamLabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
-.openPackBtn:hover:not(:disabled) {
-  background: var(--color-accent-hover);
-  transform: translateY(-2px);
+.ghostTeamSlots {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
-.openPackBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.ghostSlot {
+  width: 60px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ghostSlotEditable { cursor: pointer; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.ghostSlotEditable:hover { border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(124,58,237,0.2); }
+
+.ghostSlotActive {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.35) !important;
+}
+
+.ghostSlotFilled { background: rgba(255,255,255,0.06); }
+
+.ghostSlotImg { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.ghostSlotImgFallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 900; color: var(--color-text-muted);
+}
+
+.ghostSlotRarity {
+  position: absolute;
+  bottom: 3px; left: 50%; transform: translateX(-50%);
+  font-size: 0.52rem; font-weight: 900;
+  background: rgba(0,0,0,0.6);
+  padding: 1px 4px; border-radius: 3px;
+  letter-spacing: 0.05em;
+}
+
+.ghostSlotRemove {
+  position: absolute; top: 3px; right: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); color: #f87171;
+  font-size: 0.55rem; line-height: 14px; text-align: center;
+}
+
+.ghostSlotPlus { font-size: 1.2rem; color: rgba(255,255,255,0.2); line-height: 1; }
+
+/* Card picker */
+.editCardPicker {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editPickerLabel {
+  font-size: 0.65rem; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--color-accent);
+}
+
+.editPickerGrid {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.editPickerCard {
+  flex-shrink: 0;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.editPickerCard:hover { border-color: var(--color-accent); background: rgba(124,58,237,0.1); }
+
+.editPickerImg { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
+.editPickerImgFallback {
+  width: 100%; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; font-weight: 900; color: var(--color-text-muted);
+  background: rgba(255,255,255,0.04); border-radius: 4px;
+}
+.editPickerRarity { font-size: 0.5rem; font-weight: 900; }
+.editPickerName {
+  font-size: 0.5rem; color: var(--color-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%; text-align: center;
+}
+
+/* BG picker */
+.editBgPicker { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+
+.editBgSwatch {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.1);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+  cursor: pointer;
+}
+.editBgSwatch:hover { transform: scale(1.15); border-color: rgba(255,255,255,0.3); }
+.editBgSwatchActive { border-color: white !important; transform: scale(1.15); box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+
+/* Inline edit inputs */
+.editNameInput {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 1.2rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  width: 220px;
+}
+.editNameInput:focus { outline: none; border-color: var(--color-accent); }
+
+.editTitleRow { display: flex; gap: var(--space-2); }
+
+.editTitleInput, .editSubInput {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+}
+.editTitleInput { width: 120px; }
+.editSubInput   { flex: 1; }
+.editTitleInput:focus, .editSubInput:focus { outline: none; border-color: var(--color-accent); }
+
+/* Stats row */
+.profileStats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.profileStat { display: flex; flex-direction: column; gap: 2px; }
+
+.profileStatVal {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.profileStatLbl {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.profileStatDivider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0;
 }
 
 .grid {

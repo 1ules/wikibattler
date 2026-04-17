@@ -91,6 +91,13 @@ export async function upgradeGuestToEmail(
   };
 }
 
+export async function getCurrentUser(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, isGuest: true, username: true, coins: true, rating: true },
+  });
+}
+
 export async function registerNewUser(
   email: string,
   password: string,

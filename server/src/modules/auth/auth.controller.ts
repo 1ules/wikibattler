@@ -5,6 +5,7 @@ import {
   loginWithEmail,
   upgradeGuestToEmail,
   registerNewUser,
+  getCurrentUser,
 } from './auth.service.js';
 import { loginSchema, registerSchema, upgradeGuestSchema } from './auth.schema.js';
 import { AppError } from '../../middleware/errorHandler.js';
@@ -77,5 +78,14 @@ export async function postLogout(req: Request, res: Response, next: NextFunction
   try {
     res.clearCookie(REFRESH_COOKIE, { path: '/api/auth/refresh' });
     res.json({ data: { ok: true } });
+  } catch (e) { next(e); }
+}
+
+export async function getMe(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) throw new AppError(401, 'Unauthorized', 'Authentication required.');
+    const user = await getCurrentUser(req.user.sub);
+    if (!user) throw new AppError(404, 'NotFound', 'User not found.');
+    res.json({ data: user });
   } catch (e) { next(e); }
 }

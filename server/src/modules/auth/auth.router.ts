@@ -9,10 +9,12 @@ import {
   postRefresh,
   postUpgrade,
   postLogout,
+  getMe,
 } from './auth.controller.js';
 
 export const authRouter: ExpressRouter = Router();
 
+authRouter.get('/me', requireAuth, getMe);
 authRouter.post('/guest', authLimiter, postGuest);
 authRouter.post('/register', authLimiter, postRegister);
 authRouter.post('/login', authLimiter, postLogin);
