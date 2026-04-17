@@ -43,7 +43,7 @@ export type { RarityRates } from './constants/game.js';
 
 // Utils
 export { calculateCP } from './utils/cp.js';
-export { evaluateTeam } from './utils/synergy.js';
+export { evaluateTeam, QID_BLOCKLIST } from './utils/synergy.js';
 export type { CardForSynergy } from './utils/synergy.js';
 export { scoreToRarity as rarityFromScore, rarityToScore } from './utils/rarity.js';
 export { normalizeWikiTitle, wikiTitleToSlug } from './utils/slug.js';

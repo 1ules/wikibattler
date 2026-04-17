@@ -1,14 +1,40 @@
 import type { QidNode, DynamicSynergy, TeamSynergyResult } from '../types/synergy.js';
 
-// QIDs too broad to generate meaningful synergies
-const BLOCKLIST = new Set([
+// QIDs too broad or semantically useless for gameplay synergies.
+// This is also used by the client to filter display labels on cards.
+export const QID_BLOCKLIST = new Set([
+  // ── Ontological / too abstract ────────────────────────────────────────────
   'Q35120',    // entity
   'Q488383',   // object
   'Q223557',   // physical object
   'Q16686448', // natural object
+  'Q4260475',  // material entity
   'Q1',        // universe
   'Q58778',    // system
   'Q830077',   // subject
+  'Q2267440',  // living being / being
+  'Q764',      // individual
+  'Q3057992',  // mortal
+  // ── Human legal/philosophical subtypes (redundant with "human") ──────────
+  'Q215627',   // person (abstract, superseded by human Q5)
+  'Q2239243',  // natural person
+  'Q3778211',  // legal person
+  'Q155076',   // juridical person
+  'Q613553',   // person or organization
+  // ── Overly granular animal taxonomy ──────────────────────────────────────
+  'Q795052',   // individual animal
+  'Q7239',     // organism (too broad — every living card has it)
+  'Q196600',   // living organism
+  'Q1053604',  // consumer (ecological role, not a gameplay type)
+  'Q16521',    // taxon (meta-concept)
+  'Q55983715', // organisms known by a particular common name
+  'Q154954',   // eukaryote
+  'Q131566',   // tetrapod
+  'Q1303',     // bilateria
+  'Q5113',     // bilateria (duplicate)
+  'Q42848',    // aggregate of organisms
+  'Q10260',    // chordate
+  // ── Wikimedia meta-pages ──────────────────────────────────────────────────
   'Q18336849', // item with given name property
   'Q4167410',  // Wikimedia disambiguation page
   'Q4167836',  // Wikimedia category
@@ -43,7 +69,7 @@ export function evaluateTeam(cards: CardForSynergy[]): TeamSynergyResult {
   for (const card of cards) {
     const seenThisCard = new Set<string>();
     for (const node of card.qidChain) {
-      if (BLOCKLIST.has(node.qid) || seenThisCard.has(node.qid)) continue;
+      if (QID_BLOCKLIST.has(node.qid) || seenThisCard.has(node.qid)) continue;
       seenThisCard.add(node.qid);
       const existing = qidMap.get(node.qid);
       if (existing) {

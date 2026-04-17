@@ -1,15 +1,22 @@
 import React, { useRef } from 'react';
 import type { UserCard } from '@wikibattler/shared';
-import { RARITY_DISPLAY } from '@wikibattler/shared';
+import { RARITY_DISPLAY, QID_BLOCKLIST } from '@wikibattler/shared';
 import styles from './Card.module.css';
 
-const MAX_VISIBLE_TAGS = 3;
+const MAX_VISIBLE_TAGS = 5;
 
 // Pull human-readable labels from the qidChain for display
 function qidLabels(card: import('@wikibattler/shared').Card): string[] {
+  const seen = new Set<string>();
   return (card.qidChain ?? [])
-    .filter(n => n.depth === 0)   // only direct types shown on card face
-    .map(n => n.label);
+    .filter(n => !QID_BLOCKLIST.has(n.qid))
+    .sort((a, b) => a.depth - b.depth)
+    .map(n => n.label)
+    .filter(label => {
+      if (!label || seen.has(label)) return false;
+      seen.add(label);
+      return true;
+    });
 }
 
 interface CardProps {

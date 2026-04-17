@@ -1,4 +1,5 @@
 import type { QidNode } from '@wikibattler/shared';
+import { QID_BLOCKLIST } from '@wikibattler/shared';
 
 const WIKI_REST   = 'https://en.wikipedia.org/api/rest_v1';
 const WIKI_API    = 'https://en.wikipedia.org/w/api.php';
@@ -173,7 +174,11 @@ export async function fetchWikiDataQids(title: string): Promise<QidNode[]> {
       addNode(qid, label, 2);
     }
 
-    return nodes;
+    // Filter blocklisted QIDs and cap at 8 most specific (shallowest depth first)
+    return nodes
+      .filter(n => !QID_BLOCKLIST.has(n.qid))
+      .sort((a, b) => a.depth - b.depth)
+      .slice(0, 8);
   } catch {
     return [];
   }
