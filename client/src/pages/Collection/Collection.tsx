@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCollection } from '../../api/useCards.js';
 import { useOpenPack, usePackState, useOpenPityPack } from '../../api/usePacks.js';
@@ -11,6 +11,12 @@ import type { QidNode } from '@wikibattler/shared';
 import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST } from '@wikibattler/shared';
 import styles from './Collection.module.css';
 
+const ALL_RARITIES = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'] as const;
+const RARITY_IDX = Object.fromEntries(ALL_RARITIES.map((r, i) => [r, i]));
+
+type SortField = 'total' | 'atk' | 'hp' | 'spd' | 'name' | 'rarity' | 'acquired';
+type SortDir   = 'desc' | 'asc';
+
 function modalQidTags(chain: QidNode[]): QidNode[] {
   const seen = new Set<string>();
   return chain
@@ -19,6 +25,19 @@ function modalQidTags(chain: QidNode[]): QidNode[] {
     .filter(n => {
       if (!n.label || seen.has(n.label)) return false;
       seen.add(n.label);
+      return true;
+    });
+}
+
+function getCardTraits(uc: UserCard): string[] {
+  const seen = new Set<string>();
+  return (uc.card.qidChain ?? [])
+    .filter(n => !QID_BLOCKLIST.has(n.qid))
+    .sort((a, b) => a.depth - b.depth)
+    .flatMap(n => (n.label ? [n.label] : []))
+    .filter(label => {
+      if (seen.has(label)) return false;
+      seen.add(label);
       return true;
     });
 }
@@ -45,7 +64,129 @@ export function Collection() {
   const [copiedShare, setCopiedShare]       = useState(false);
   const pollCancelRef = useRef(false);
 
+  // Search / filter / sort state
+  const [search, setSearch]               = useState('');
+  const [enabledRarities, setEnabledRarities] = useState<Set<string>>(new Set(ALL_RARITIES));
+  const [foilOnly, setFoilOnly]           = useState(false);
+  const [sortField, setSortField]         = useState<SortField>('total');
+  const [sortDir, setSortDir]             = useState<SortDir>('desc');
+  const [selectedTraits, setSelectedTraits] = useState<Set<string>>(new Set());
+  const [traitOpen, setTraitOpen]         = useState(false);
+  const [traitSearch, setTraitSearch]     = useState('');
+  const traitPopoverRef = useRef<HTMLDivElement>(null);
+  const traitBtnRef     = useRef<HTMLButtonElement>(null);
+
   usePackState();
+
+  // Close trait popover on outside click
+  useEffect(() => {
+    if (!traitOpen) return;
+    function handler(e: MouseEvent) {
+      if (
+        traitPopoverRef.current && !traitPopoverRef.current.contains(e.target as Node) &&
+        traitBtnRef.current     && !traitBtnRef.current.contains(e.target as Node)
+      ) {
+        setTraitOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [traitOpen]);
+
+  const allTraits = useMemo(() => {
+    if (!collection?.data) return [];
+    const seen = new Set<string>();
+    const traits: string[] = [];
+    for (const uc of collection.data) {
+      for (const t of getCardTraits(uc as UserCard)) {
+        if (!seen.has(t)) { seen.add(t); traits.push(t); }
+      }
+    }
+    return traits.sort((a, b) => a.localeCompare(b));
+  }, [collection?.data]);
+
+  const filteredCollection = useMemo<UserCard[]>(() => {
+    if (!collection?.data) return [];
+    const q = search.trim().toLowerCase();
+    const allEnabled = enabledRarities.size === ALL_RARITIES.length;
+
+    let result = (collection.data as UserCard[]).filter(uc => {
+      if (!allEnabled && !enabledRarities.has(uc.card.rarity)) return false;
+      if (foilOnly && !uc.isFoil) return false;
+      if (selectedTraits.size > 0) {
+        const traits = new Set(getCardTraits(uc));
+        if (![...selectedTraits].some(t => traits.has(t))) return false;
+      }
+      if (q) {
+        const inName   = uc.card.wikiTitle.toLowerCase().includes(q);
+        const inExtract = (uc.card.wikiExtract ?? '').toLowerCase().includes(q);
+        const inTraits  = getCardTraits(uc).some(t => t.toLowerCase().includes(q));
+        if (!inName && !inExtract && !inTraits) return false;
+      }
+      return true;
+    });
+
+    result = [...result].sort((a, b) => {
+      let diff = 0;
+      switch (sortField) {
+        case 'total':
+          diff = (a.card.attack + a.card.health + a.card.speed) - (b.card.attack + b.card.health + b.card.speed);
+          break;
+        case 'atk':     diff = a.card.attack - b.card.attack; break;
+        case 'hp':      diff = a.card.health - b.card.health; break;
+        case 'spd':     diff = a.card.speed  - b.card.speed;  break;
+        case 'name':    diff = a.card.wikiTitle.localeCompare(b.card.wikiTitle); break;
+        case 'rarity':  diff = (RARITY_IDX[a.card.rarity] ?? 0) - (RARITY_IDX[b.card.rarity] ?? 0); break;
+        case 'acquired':
+          diff = new Date(a.acquiredAt).getTime() - new Date(b.acquiredAt).getTime();
+          break;
+      }
+      return sortDir === 'desc' ? -diff : diff;
+    });
+
+    return result;
+  }, [collection?.data, search, enabledRarities, foilOnly, sortField, sortDir, selectedTraits]);
+
+  function toggleRarity(rarity: string) {
+    setEnabledRarities(prev => {
+      const allOn = prev.size === ALL_RARITIES.length;
+      if (allOn) return new Set([rarity]);
+      const next = new Set(prev);
+      if (next.has(rarity) && next.size === 1) return new Set(ALL_RARITIES);
+      if (next.has(rarity)) { next.delete(rarity); } else { next.add(rarity); }
+      return next.size === ALL_RARITIES.length ? new Set(ALL_RARITIES) : next;
+    });
+  }
+
+  function toggleTrait(trait: string) {
+    setSelectedTraits(prev => {
+      const next = new Set(prev);
+      if (next.has(trait)) { next.delete(trait); } else { next.add(trait); }
+      return next;
+    });
+  }
+
+  function resetFilters() {
+    setSearch('');
+    setEnabledRarities(new Set(ALL_RARITIES));
+    setFoilOnly(false);
+    setSortField('total');
+    setSortDir('desc');
+    setSelectedTraits(new Set());
+    setTraitSearch('');
+  }
+
+  const hasActiveFilters =
+    search !== '' ||
+    enabledRarities.size !== ALL_RARITIES.length ||
+    foilOnly ||
+    selectedTraits.size > 0 ||
+    sortField !== 'total' ||
+    sortDir !== 'desc';
+
+  const visibleTraits = traitSearch
+    ? allTraits.filter(t => t.toLowerCase().includes(traitSearch.toLowerCase()))
+    : allTraits;
 
   async function handleOpenPack() {
     if (storedPacks < 1 || openPack.isPending) return;
@@ -117,7 +258,6 @@ export function Collection() {
     setPackOpenerOpen(false);
     setPendingCards(null);
     setPackCharging(false);
-    // Refresh collection now that cards (with traits) are ready in the DB
     void queryClient.invalidateQueries({ queryKey: ['cards'] });
   }
 
@@ -174,12 +314,9 @@ export function Collection() {
               aria-label="Close"
             >✕</button>
 
-            {/* Full card name */}
             <h2 className={styles.modalCardName}>{selectedCard.card.wikiTitle}</h2>
 
-            {/* Three-column: actions | card | extract */}
             <div className={styles.modalMain}>
-              {/* Left — action buttons */}
               <div className={styles.modalActions}>
                 <a
                   className={styles.modalActionBtn}
@@ -203,12 +340,10 @@ export function Collection() {
                 </button>
               </div>
 
-              {/* Card — same size/format as collection */}
               <div className={styles.modalCardWrap}>
                 <Card userCard={selectedCard} tilt />
               </div>
 
-              {/* Right — scrollable extract with fade */}
               <div className={styles.modalExtract}>
                 <div className={styles.modalExtractScroll}>
                   <p className={styles.modalExtractText}>
@@ -219,7 +354,6 @@ export function Collection() {
               </div>
             </div>
 
-            {/* WikiData type labels — deduplicated + blocklist-filtered */}
             {(() => {
               const tags = modalQidTags(selectedCard.card.qidChain ?? []);
               return tags.length > 0 ? (
@@ -321,6 +455,142 @@ export function Collection() {
         </div>
       </section>
 
+      {/* ── Search / Filter / Sort Controls ── */}
+      {!isLoading && (collection?.data.length ?? 0) > 0 && (
+        <div className={styles.controls}>
+          {/* Row 1: search + traits dropdown + sort */}
+          <div className={styles.searchRow}>
+            <input
+              className={styles.searchInput}
+              type="search"
+              placeholder="Search by name, description, or trait…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              aria-label="Search cards"
+            />
+
+            <div className={styles.traitDropdown}>
+              <button
+                ref={traitBtnRef}
+                className={[styles.traitToggleBtn, selectedTraits.size > 0 ? styles.traitToggleBtnActive : ''].filter(Boolean).join(' ')}
+                onClick={() => setTraitOpen(o => !o)}
+                aria-expanded={traitOpen}
+              >
+                Traits{selectedTraits.size > 0 ? ` (${selectedTraits.size})` : ''}
+                <span className={styles.traitToggleArrow}>{traitOpen ? '▲' : '▼'}</span>
+              </button>
+              {traitOpen && (
+                <div className={styles.traitPopover} ref={traitPopoverRef}>
+                  <input
+                    className={styles.traitSearch}
+                    type="search"
+                    placeholder="Filter traits…"
+                    value={traitSearch}
+                    onChange={e => setTraitSearch(e.target.value)}
+                    autoFocus
+                  />
+                  <div className={styles.traitList}>
+                    {visibleTraits.length === 0 ? (
+                      <span className={styles.traitEmpty}>No traits found</span>
+                    ) : visibleTraits.map(trait => (
+                      <label key={trait} className={[styles.traitItem, selectedTraits.has(trait) ? styles.traitItemActive : ''].filter(Boolean).join(' ')}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTraits.has(trait)}
+                          onChange={() => toggleTrait(trait)}
+                          className={styles.traitCheckbox}
+                        />
+                        {trait}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.sortControl}>
+              <select
+                className={styles.sortSelect}
+                value={sortField}
+                onChange={e => setSortField(e.target.value as SortField)}
+                aria-label="Sort by"
+              >
+                <option value="total">Total Power</option>
+                <option value="atk">ATK</option>
+                <option value="hp">HP</option>
+                <option value="spd">SPD</option>
+                <option value="rarity">Rarity</option>
+                <option value="name">Name</option>
+                <option value="acquired">Date Acquired</option>
+              </select>
+              <button
+                className={styles.sortDirBtn}
+                onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+                aria-label={sortDir === 'desc' ? 'Sort descending' : 'Sort ascending'}
+                title={sortDir === 'desc' ? 'Descending' : 'Ascending'}
+              >
+                {sortDir === 'desc' ? '↓' : '↑'}
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: rarity chips + foil + reset */}
+          <div className={styles.filterRow}>
+            {ALL_RARITIES.map(r => (
+              <button
+                key={r}
+                className={[
+                  styles.rarityChip,
+                  enabledRarities.has(r) && enabledRarities.size < ALL_RARITIES.length
+                    ? (styles[`rarityChipActive-${r}`] ?? styles.rarityChipActiveDefault)
+                    : '',
+                ].filter(Boolean).join(' ')}
+                onClick={() => toggleRarity(r)}
+                aria-pressed={enabledRarities.size < ALL_RARITIES.length && enabledRarities.has(r)}
+              >
+                {r}
+              </button>
+            ))}
+
+            <button
+              className={[styles.foilToggle, foilOnly ? styles.foilActive : ''].filter(Boolean).join(' ')}
+              onClick={() => setFoilOnly(o => !o)}
+              aria-pressed={foilOnly}
+            >
+              ✦ Foil
+            </button>
+
+            {hasActiveFilters && (
+              <button className={styles.resetBtn} onClick={resetFilters}>
+                Reset
+              </button>
+            )}
+          </div>
+
+          {/* Active trait chips */}
+          {selectedTraits.size > 0 && (
+            <div className={styles.activeTraits}>
+              {[...selectedTraits].map(trait => (
+                <button
+                  key={trait}
+                  className={styles.traitChip}
+                  onClick={() => toggleTrait(trait)}
+                  title="Remove filter"
+                >
+                  {trait} ✕
+                </button>
+              ))}
+            </div>
+          )}
+
+          <span className={styles.resultCount}>
+            {filteredCollection.length === collection?.data.length
+              ? `${filteredCollection.length} cards`
+              : `${filteredCollection.length} of ${collection?.data.length} cards`}
+          </span>
+        </div>
+      )}
+
       {/* ── Collection grid ── */}
       {isLoading ? (
         <div className={styles.loadingGrid}>
@@ -333,13 +603,18 @@ export function Collection() {
           <p>Your collection is empty.</p>
           <p>Open a pack to get your first cards!</p>
         </div>
+      ) : filteredCollection.length === 0 ? (
+        <div className={styles.empty}>
+          <p>No cards match your filters.</p>
+          <button className={styles.resetBtnInline} onClick={resetFilters}>Clear filters</button>
+        </div>
       ) : (
         <div className={styles.grid}>
-          {collection?.data.map((uc) => (
+          {filteredCollection.map((uc) => (
             <Card
               key={uc.id}
-              userCard={uc as UserCard}
-              onClick={() => setSelectedCard(uc as UserCard)}
+              userCard={uc}
+              onClick={() => setSelectedCard(uc)}
             />
           ))}
         </div>

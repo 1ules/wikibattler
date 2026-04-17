@@ -235,6 +235,256 @@
   border: 1px solid rgba(251,191,36,0.4);
 }
 
+/* ─── Search / Filter / Sort Controls ───────────────────────────────────── */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+}
+.searchInput::placeholder { color: var(--color-text-muted); }
+
+/* Trait dropdown */
+.traitDropdown { position: relative; }
+
+.traitToggleBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.traitToggleBtn:hover { border-color: var(--color-accent); color: var(--color-text); }
+.traitToggleBtnActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.traitToggleArrow { font-size: 0.6rem; opacity: 0.6; }
+
+.traitPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 200px;
+  max-width: 280px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.traitSearch {
+  width: 100%;
+  padding: var(--space-1) var(--space-3);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 0.78rem;
+}
+.traitSearch:focus { outline: none; border-color: var(--color-accent); }
+.traitSearch::placeholder { color: var(--color-text-muted); }
+
+.traitList {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: thin;
+}
+
+.traitItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  user-select: none;
+}
+.traitItem:hover { background: rgba(255,255,255,0.05); color: var(--color-text); }
+.traitItemActive { color: var(--color-accent); background: rgba(124,58,237,0.08); }
+
+.traitCheckbox { accent-color: var(--color-accent); width: 13px; height: 13px; flex-shrink: 0; }
+.traitEmpty { font-size: 0.75rem; color: var(--color-text-muted); padding: var(--space-2); text-align: center; }
+
+/* Sort */
+.sortControl {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sortSelect {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.sortSelect:focus { outline: none; border-color: var(--color-accent); }
+
+.sortDirBtn {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: none;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.sortDirBtn:hover { color: var(--color-text); background: rgba(255,255,255,0.05); }
+
+/* Rarity chips + foil */
+.filterRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.rarityChip {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.rarityChip:hover { color: var(--color-text); border-color: rgba(255,255,255,0.2); }
+
+.rarityChipActive-C   { background: rgba(156,163,175,0.18); border-color: #9ca3af; color: #9ca3af; }
+.rarityChipActive-UC  { background: rgba(74,222,128,0.15);  border-color: #4ade80; color: #4ade80; }
+.rarityChipActive-R   { background: rgba(96,165,250,0.15);  border-color: #60a5fa; color: #60a5fa; }
+.rarityChipActive-SR  { background: rgba(251,146,60,0.18);  border-color: #fb923c; color: #fb923c; }
+.rarityChipActive-SSR { background: rgba(248,113,113,0.18); border-color: #f87171; color: #f87171; }
+.rarityChipActive-UR  { background: rgba(251,191,36,0.18);  border-color: #fbbf24; color: #fbbf24; }
+.rarityChipActive-MR  { background: rgba(192,132,252,0.18); border-color: #c084fc; color: #c084fc; }
+.rarityChipActiveDefault { background: rgba(124,58,237,0.12); border-color: var(--color-accent); color: var(--color-accent); }
+
+.foilToggle {
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.foilToggle:hover { color: #c084fc; border-color: #c084fc; }
+.foilActive {
+  background: rgba(192,132,252,0.15);
+  border-color: #c084fc;
+  color: #c084fc;
+}
+
+.resetBtn {
+  margin-left: auto;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--color-text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.resetBtn:hover { background: rgba(255,255,255,0.08); color: var(--color-text); }
+
+/* Active trait chips */
+.activeTraits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.traitChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(124,58,237,0.14);
+  border: 1px solid rgba(124,58,237,0.4);
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+}
+.traitChip:hover { background: rgba(124,58,237,0.24); }
+
+.resultCount {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.resetBtnInline {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid var(--color-border);
+  background: rgba(255,255,255,0.05);
+  color: var(--color-text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.resetBtnInline:hover { background: rgba(255,255,255,0.1); color: var(--color-text); }
+
 /* ─── Card Detail Modal ───────────────────────────────────────────────────── */
 .modalOverlay {
   position: fixed;
