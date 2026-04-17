@@ -40,7 +40,9 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   const [floatParticles, setFloatParticles] = useState<FloatParticle[]>([]);
   const [showReadyBurst, setShowReadyBurst] = useState(false);
   const particleId = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Separate timers: phaseTimer is cleaned up on phase change; chargeTimer is not
+  const phaseTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cardsRef = useRef(cards);
 
@@ -49,7 +51,8 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   useEffect(() => {
     return () => {
       revealTimersRef.current.forEach(clearTimeout);
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (phaseTimerRef.current)  clearTimeout(phaseTimerRef.current);
+      if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
     };
   }, []);
 
@@ -58,7 +61,8 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     if (!isCharging && phase === 'charging') {
       setPhase('ready-fanfare');
       setShowReadyBurst(true);
-      timerRef.current = setTimeout(() => {
+      // Use a dedicated timer so the phase-effect cleanup can't cancel this
+      chargeTimerRef.current = setTimeout(() => {
         setShowReadyBurst(false);
         setPhase('sealed');
       }, 900);
@@ -68,14 +72,14 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   // Auto-advance shake → burst → reveal
   useEffect(() => {
     if (phase === 'shaking') {
-      timerRef.current = setTimeout(() => setPhase('bursting'), 800);
+      phaseTimerRef.current = setTimeout(() => setPhase('bursting'), 800);
     } else if (phase === 'bursting') {
-      timerRef.current = setTimeout(() => {
+      phaseTimerRef.current = setTimeout(() => {
         setPhase('revealing');
         startReveal();
       }, 500);
     }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => { if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function spawnFloatParticles(rarity: string) {
@@ -129,7 +133,8 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   }
 
   function handleSkip() {
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (phaseTimerRef.current)  clearTimeout(phaseTimerRef.current);
+    if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
     revealTimersRef.current.forEach(clearTimeout);
     revealTimersRef.current = [];
     setFlashColor(null);
@@ -177,7 +182,7 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
           <div className={styles.packScene}>
             {/* Particle ring — centered on the pack */}
             <div className={styles.packMain}>
-              {isChargingPhase && (
+              {phase === 'charging' && (
                 <div className={styles.chargeRing} aria-hidden="true">
                   {CHARGE_PARTICLES.map(p => (
                     <div
