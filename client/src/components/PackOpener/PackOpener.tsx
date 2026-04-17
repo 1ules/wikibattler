@@ -6,14 +6,50 @@ import styles from './PackOpener.module.css';
 type Phase = 'charging' | 'ready-fanfare' | 'sealed' | 'shaking' | 'bursting' | 'revealing' | 'done';
 
 const FLASH_RARITIES = new Set(['SR', 'SSR', 'UR', 'MR']);
-const RARITY_ORDER = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'];
-const FLASH_COLORS: Record<string, string> = {
-  SR:  'rgba(251,146,60,0.22)',
-  SSR: 'rgba(248,113,113,0.28)',
-  UR:  'rgba(251,191,36,0.32)',
-  MR:  'rgba(192,132,252,0.35)',
-};
-const PARTICLE_COUNTS: Record<string, number> = { SR: 0, SSR: 6, UR: 12, MR: 20 };
+const RARITY_ORDER   = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'];
+
+const RARITY_CONFIG = {
+  SR: {
+    particleCount: 4,
+    interval:      1800,
+    novaInterval:  0,
+    colors: ['#fb923c', '#f97316', '#fbbf24', '#f59e0b'],
+    sizeMin: 3, sizeMax: 6,
+    durMin: 1.6, durMax: 2.2,
+    dxRange: 50,
+    type: 'Ember' as const,
+  },
+  SSR: {
+    particleCount: 8,
+    interval:      1100,
+    novaInterval:  0,
+    colors: ['#f87171', '#ef4444', '#fb923c', '#fbbf24'],
+    sizeMin: 4, sizeMax: 8,
+    durMin: 1.0, durMax: 1.5,
+    dxRange: 80,
+    type: 'Spark' as const,
+  },
+  UR: {
+    particleCount: 12,
+    interval:      800,
+    novaInterval:  0,
+    colors: ['#fbbf24', '#f0c860', '#fde68a', '#facc15', '#fff7c0'],
+    sizeMin: 5, sizeMax: 10,
+    durMin: 0.9, durMax: 1.3,
+    dxRange: 120,
+    type: 'Star' as const,
+  },
+  MR: {
+    particleCount: 16,
+    interval:      700,
+    novaInterval:  3200,
+    colors: ['#c084fc', '#ec4899', '#6366f1', '#a855f7', '#818cf8', '#f472b6'],
+    sizeMin: 6, sizeMax: 14,
+    durMin: 0.8, durMax: 1.2,
+    dxRange: 160,
+    type: 'Orb' as const,
+  },
+} as const;
 
 // Deterministic charge particles (stable across renders)
 const CHARGE_PARTICLES = Array.from({ length: 28 }, (_, i) => ({
@@ -26,27 +62,28 @@ const CHARGE_PARTICLES = Array.from({ length: 28 }, (_, i) => ({
   delay: -((i / 28) * 1.4),
 }));
 
-interface FloatParticle { id: number; dx: number; color: string; size: number; }
+type ParticleType = 'Ember' | 'Spark' | 'Star' | 'Orb' | 'Nova';
+interface FloatParticle { id: number; dx: number; angle: number; color: string; size: number; type: ParticleType; dur: number; }
 
 interface PackOpenerProps {
-  cards: UserCard[];     // empty while charging, populated when ready
-  isCharging: boolean;   // controlled by parent
+  cards: UserCard[];
+  isCharging: boolean;
   onClose: () => void;
 }
 
 export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
-  const [phase, setPhase] = useState<Phase>(isCharging ? 'charging' : 'sealed');
-  const [revealed, setRevealed] = useState<boolean[]>([]);
-  const [flashColor, setFlashColor] = useState<string | null>(null);
+  const [phase, setPhase]               = useState<Phase>(isCharging ? 'charging' : 'sealed');
+  const [revealed, setRevealed]         = useState<boolean[]>([]);
+  const [flashRarity, setFlashRarity]   = useState<string | null>(null);
   const [floatParticles, setFloatParticles] = useState<FloatParticle[]>([]);
   const [showReadyBurst, setShowReadyBurst] = useState(false);
-  const [peakRarity, setPeakRarity] = useState<string | null>(null);
-  const particleId = useRef(0);
-  // Separate timers: phaseTimer is cleaned up on phase change; chargeTimer is not
-  const phaseTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const chargeTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ambientRef       = useRef<ReturnType<typeof setInterval> | null>(null);
-  const revealTimersRef  = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [peakRarity, setPeakRarity]     = useState<string | null>(null);
+  const particleId    = useRef(0);
+  const phaseTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ambientRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const novaTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const revealTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cardsRef = useRef(cards);
 
   useEffect(() => { cardsRef.current = cards; }, [cards]);
@@ -57,44 +94,53 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
       if (phaseTimerRef.current)  clearTimeout(phaseTimerRef.current);
       if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
       if (ambientRef.current)     clearInterval(ambientRef.current);
+      if (novaTimerRef.current)   clearInterval(novaTimerRef.current);
     };
   }, []);
 
-  const spawnFloatParticles = useCallback((rarity: string) => {
-    const count = PARTICLE_COUNTS[rarity] ?? 0;
-    if (count === 0) return;
-    const colors = {
-      SSR: ['#f87171', '#fb923c', '#fbbf24'],
-      UR:  ['#fbbf24', '#f0c860', '#fde68a'],
-      MR:  ['#c084fc', '#ec4899', '#6366f1', '#a855f7'],
-    }[rarity] ?? ['#fff'];
-    const newParticles: FloatParticle[] = Array.from({ length: count }, () => ({
+  const spawnParticles = useCallback((rarity: string, nova = false) => {
+    const cfg = RARITY_CONFIG[rarity as keyof typeof RARITY_CONFIG];
+    if (!cfg) return;
+    const count = nova ? 28 : cfg.particleCount;
+    const newParticles: FloatParticle[] = Array.from({ length: count }, (_, i) => ({
       id: ++particleId.current,
-      dx: (Math.random() - 0.5) * 80,
-      color: colors[Math.floor(Math.random() * colors.length)] ?? '#fff',
-      size: 4 + Math.random() * 6,
+      dx:    nova ? 0 : (Math.random() - 0.5) * cfg.dxRange * 2,
+      angle: nova ? (360 / count) * i : 0,
+      color: cfg.colors[Math.floor(Math.random() * cfg.colors.length)] ?? '#fff',
+      size:  cfg.sizeMin + Math.random() * (cfg.sizeMax - cfg.sizeMin),
+      type:  nova ? 'Nova' : cfg.type,
+      dur:   nova ? 0.8 + Math.random() * 0.4 : cfg.durMin + Math.random() * (cfg.durMax - cfg.durMin),
     }));
+    const lifetime = nova ? 1200 : cfg.durMax * 1000 + 200;
     setFloatParticles(p => [...p, ...newParticles]);
     setTimeout(() => {
       setFloatParticles(p => p.filter(x => !newParticles.some(n => n.id === x.id)));
-    }, 1200);
+    }, lifetime);
   }, []);
 
-  // Loop ambient particles while SR+ cards are visible
+  // Loop ambient particles (+ MR nova) while SR+ cards are visible
   useEffect(() => {
     const showCards = phase === 'revealing' || phase === 'done';
     if (showCards && peakRarity && FLASH_RARITIES.has(peakRarity)) {
-      ambientRef.current = setInterval(() => spawnFloatParticles(peakRarity), 1400);
+      const cfg = RARITY_CONFIG[peakRarity as keyof typeof RARITY_CONFIG];
+      ambientRef.current = setInterval(() => spawnParticles(peakRarity, false), cfg.interval);
+      if (cfg.novaInterval > 0) {
+        const firstNova = setTimeout(() => spawnParticles(peakRarity, true), 600);
+        revealTimersRef.current.push(firstNova);
+        novaTimerRef.current = setInterval(() => spawnParticles(peakRarity, true), cfg.novaInterval);
+      }
     }
-    return () => { if (ambientRef.current) { clearInterval(ambientRef.current); ambientRef.current = null; } };
-  }, [phase, peakRarity, spawnFloatParticles]);
+    return () => {
+      if (ambientRef.current)   { clearInterval(ambientRef.current);   ambientRef.current = null; }
+      if (novaTimerRef.current) { clearInterval(novaTimerRef.current); novaTimerRef.current = null; }
+    };
+  }, [phase, peakRarity, spawnParticles]);
 
   // When parent signals charging is done → play ready fanfare then unlock
   useEffect(() => {
     if (!isCharging && phase === 'charging') {
       setPhase('ready-fanfare');
       setShowReadyBurst(true);
-      // Use a dedicated timer so the phase-effect cleanup can't cancel this
       chargeTimerRef.current = setTimeout(() => {
         setShowReadyBurst(false);
         setPhase('sealed');
@@ -116,10 +162,8 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function triggerFlash(rarity: string) {
-    const color = FLASH_COLORS[rarity];
-    if (!color) return;
-    setFlashColor(color);
-    setTimeout(() => setFlashColor(null), 700);
+    setFlashRarity(rarity);
+    setTimeout(() => setFlashRarity(null), 700);
   }
 
   function startReveal() {
@@ -135,7 +179,7 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
         const rarity = uc.card.rarity;
         if (FLASH_RARITIES.has(rarity)) {
           triggerFlash(rarity);
-          spawnFloatParticles(rarity);
+          spawnParticles(rarity, false);
           setPeakRarity(prev => {
             const prevIdx = RARITY_ORDER.indexOf(prev ?? '');
             return RARITY_ORDER.indexOf(rarity) > prevIdx ? rarity : prev;
@@ -152,14 +196,15 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   function handleSkip() {
     if (phaseTimerRef.current)  clearTimeout(phaseTimerRef.current);
     if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
+    if (ambientRef.current)     clearInterval(ambientRef.current);
+    if (novaTimerRef.current)   clearInterval(novaTimerRef.current);
     revealTimersRef.current.forEach(clearTimeout);
     revealTimersRef.current = [];
-    setFlashColor(null);
+    setFlashRarity(null);
     setFloatParticles([]);
     setShowReadyBurst(false);
     setPhase('done');
     setRevealed(cardsRef.current.map(() => true));
-    // Compute peak from all cards so the ambient still shows after skip
     const peak = cardsRef.current.reduce<string | null>((best, uc) => {
       const idx = RARITY_ORDER.indexOf(uc.card.rarity);
       return idx > RARITY_ORDER.indexOf(best ?? '') ? uc.card.rarity : best;
@@ -179,27 +224,34 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
 
   return (
     <div className={styles.overlay} aria-modal="true" role="dialog">
-      {/* Looping ambient glow when SR+ cards are visible */}
+      {/* Rarity-specific ambient background — loops until closed */}
       {showCards && peakRarity && FLASH_RARITIES.has(peakRarity) && (
-        <div
-          className={styles.ambientGlow}
-          style={{ background: `radial-gradient(ellipse at center, ${FLASH_COLORS[peakRarity]} 0%, transparent 65%)` }}
-        />
+        <>
+          <div className={`${styles.ambientBase} ${styles[`ambient${peakRarity}`] ?? ''}`} />
+          {peakRarity === 'UR' && <div className={styles.urRays} />}
+          {peakRarity === 'MR' && <div className={styles.mrColorShift} />}
+        </>
       )}
 
-      {flashColor && (
-        <div
-          className={styles.rarityFlash}
-          style={{ background: `radial-gradient(ellipse at center, ${flashColor} 0%, transparent 70%)` }}
-        />
+      {/* Per-card reveal flash */}
+      {flashRarity && (
+        <div className={`${styles.rarityFlash} ${styles[`flash${flashRarity}`] ?? ''}`} />
       )}
 
       <div className={styles.particleLayer} aria-hidden="true">
         {floatParticles.map(p => (
           <div
             key={p.id}
-            className={styles.floatParticle}
-            style={{ '--dx': `${p.dx}px`, background: p.color, width: p.size, height: p.size } as React.CSSProperties}
+            className={`${styles.floatParticle} ${styles[`particle${p.type}`] ?? ''}`}
+            style={{
+              '--dx':    `${p.dx}px`,
+              '--angle': `${p.angle}deg`,
+              '--dur':   `${p.dur}s`,
+              background: p.color,
+              color:      p.color,
+              width:  p.size,
+              height: p.size,
+            } as React.CSSProperties}
           />
         ))}
       </div>
@@ -211,7 +263,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
 
         {showPack && (
           <div className={styles.packScene}>
-            {/* Particle ring — centered on the pack */}
             <div className={styles.packMain}>
               {phase === 'charging' && (
                 <div className={styles.chargeRing} aria-hidden="true">
@@ -220,9 +271,9 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
                       key={p.id}
                       className={styles.chargeParticle}
                       style={{
-                        '--angle': `${p.angle}deg`,
-                        '--dist':  `${p.dist}px`,
-                        '--dur':   `${p.dur}s`,
+                        '--angle':  `${p.angle}deg`,
+                        '--dist':   `${p.dist}px`,
+                        '--dur':    `${p.dur}s`,
                         '--cdelay': `${p.delay}s`,
                         width:  p.size,
                         height: p.size,
@@ -248,10 +299,10 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
               <div
                 className={[
                   styles.packWrap,
-                  isChargingPhase          ? styles.packCharging   : '',
-                  phase === 'ready-fanfare'? styles.packReadyFlash : '',
-                  phase === 'shaking'      ? styles.shaking        : '',
-                  phase === 'bursting'     ? styles.bursting       : '',
+                  isChargingPhase           ? styles.packCharging   : '',
+                  phase === 'ready-fanfare' ? styles.packReadyFlash : '',
+                  phase === 'shaking'       ? styles.shaking        : '',
+                  phase === 'bursting'      ? styles.bursting       : '',
                 ].filter(Boolean).join(' ')}
                 onClick={handlePackClick}
                 role="button"

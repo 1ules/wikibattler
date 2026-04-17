@@ -11,28 +11,111 @@
   overflow: hidden;
 }
 
-/* ─── Ambient glow — loops for SR+ while cards are shown ─────────────────── */
-.ambientGlow {
+/* ─── Ambient glow — rarity-specific, loops while SR+ cards are shown ────── */
+.ambientBase {
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  animation: ambient-pulse 2.4s ease-in-out infinite;
 }
 
-@keyframes ambient-pulse {
-  0%, 100% { opacity: 0.15; }
-  50%       { opacity: 0.55; }
+/* SR — warm ember breathe */
+.ambientSR {
+  background: radial-gradient(ellipse 70% 55% at center, rgba(251,146,60,0.32) 0%, rgba(234,88,12,0.08) 55%, transparent 75%);
+  animation: sr-pulse 2.8s ease-in-out infinite;
+}
+@keyframes sr-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 0.95; }
 }
 
-/* ─── Rarity flash ────────────────────────────────────────────────────────── */
+/* SSR — red inferno with scale breathe */
+.ambientSSR {
+  background: radial-gradient(ellipse 82% 62% at center, rgba(239,68,68,0.42) 0%, rgba(251,146,60,0.12) 55%, transparent 78%);
+  animation: ssr-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ssr-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.96); }
+  50%       { opacity: 1.0; transform: scale(1.05); }
+}
+
+/* UR — gold radiance, punchy pulse */
+.ambientUR {
+  background: radial-gradient(ellipse 90% 65% at center, rgba(251,191,36,0.52) 0%, rgba(200,168,75,0.16) 55%, transparent 78%);
+  animation: ur-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ur-pulse {
+  0%, 100% { opacity: 0.38; transform: scale(0.93); }
+  50%       { opacity: 1.0;  transform: scale(1.07); }
+}
+
+/* UR — slow-spinning light rays */
+.urRays {
+  position: absolute;
+  inset: -100%;
+  z-index: 1;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,   rgba(251,191,36,0.07) 5deg,  transparent 10deg,
+    transparent 28deg,  rgba(251,191,36,0.05) 33deg,  transparent 38deg,
+    transparent 58deg,  rgba(251,191,36,0.08) 63deg,  transparent 68deg,
+    transparent 88deg,  rgba(251,191,36,0.04) 93deg,  transparent 98deg,
+    transparent 118deg, rgba(251,191,36,0.07) 123deg, transparent 128deg,
+    transparent 148deg, rgba(251,191,36,0.05) 153deg, transparent 158deg,
+    transparent 178deg, rgba(251,191,36,0.08) 183deg, transparent 188deg,
+    transparent 208deg, rgba(251,191,36,0.04) 213deg, transparent 218deg,
+    transparent 238deg, rgba(251,191,36,0.07) 243deg, transparent 248deg,
+    transparent 268deg, rgba(251,191,36,0.05) 273deg, transparent 278deg,
+    transparent 298deg, rgba(251,191,36,0.06) 303deg, transparent 308deg,
+    transparent 328deg, rgba(251,191,36,0.04) 333deg, transparent 338deg
+  );
+  animation: ur-rays-spin 14s linear infinite;
+}
+@keyframes ur-rays-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* MR — purple storm with hue cycling */
+.ambientMR {
+  background: radial-gradient(ellipse 100% 70% at center, rgba(192,132,252,0.58) 0%, rgba(99,102,241,0.22) 55%, transparent 80%);
+  animation: mr-pulse 1.2s ease-in-out infinite, mr-hue 4s linear infinite;
+}
+@keyframes mr-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.92); }
+  50%       { opacity: 1.0;  transform: scale(1.08); }
+}
+@keyframes mr-hue {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* MR — secondary color-shift layer */
+.mrColorShift {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 120% 80% at center, rgba(236,72,153,0.22) 0%, transparent 65%);
+  animation: mr-shift 2.2s ease-in-out infinite alternate;
+}
+@keyframes mr-shift {
+  0%   { opacity: 0.3; filter: hue-rotate(0deg); }
+  100% { opacity: 0.8; filter: hue-rotate(100deg); }
+}
+
+/* ─── Rarity flash (on card reveal) ──────────────────────────────────────── */
 .rarityFlash {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   pointer-events: none;
   animation: rarity-flash 0.7s ease-out forwards;
 }
+.flashSR  { background: radial-gradient(ellipse at center, rgba(251,146,60,0.62) 0%, transparent 65%); }
+.flashSSR { background: radial-gradient(ellipse at center, rgba(239,68,68,0.78) 0%, transparent 65%); }
+.flashUR  { background: radial-gradient(ellipse at center, rgba(251,191,36,0.88) 0%, transparent 65%); }
+.flashMR  { background: radial-gradient(ellipse at center, rgba(192,132,252,0.95) 0%, transparent 65%); }
 
 /* ─── Particle layer ──────────────────────────────────────────────────────── */
 .particleLayer {
@@ -45,12 +128,68 @@
   justify-content: center;
 }
 
+/* Shared particle base */
 .floatParticle {
   position: absolute;
-  bottom: 45%;
   border-radius: 50%;
-  animation: float-up 1.1s ease-out forwards;
-  --dx: 0px;
+}
+
+/* SR — slow ember, drifts upward gently */
+.particleEmber {
+  bottom: 45%;
+  animation: float-ember var(--dur, 1.8s) ease-out forwards;
+}
+@keyframes float-ember {
+  0%   { transform: translateX(0)         translateY(0)     scale(1);   opacity: 0.9; }
+  40%  { opacity: 0.8; }
+  100% { transform: translateX(var(--dx)) translateY(-160px) scale(0.3); opacity: 0; }
+}
+
+/* SSR — fast spark with glow trail */
+.particleSpark {
+  bottom: 45%;
+  box-shadow: 0 0 5px 2px currentColor;
+  animation: float-spark var(--dur, 1.2s) ease-out forwards;
+}
+@keyframes float-spark {
+  0%   { transform: translateX(0)         translateY(0)     scale(1);   opacity: 1; }
+  20%  { opacity: 1; }
+  100% { transform: translateX(var(--dx)) translateY(-230px) scale(0.1); opacity: 0; }
+}
+
+/* UR — rotating star with bright glow */
+.particleStar {
+  bottom: 45%;
+  box-shadow: 0 0 8px 3px currentColor;
+  animation: float-star var(--dur, 1.1s) ease-out forwards;
+}
+@keyframes float-star {
+  0%   { transform: translateX(0)         translateY(0)     rotate(0deg)   scale(1.2); opacity: 1; }
+  100% { transform: translateX(var(--dx)) translateY(-270px) rotate(240deg) scale(0);   opacity: 0; }
+}
+
+/* MR — large orb, chaotic, strong glow */
+.particleOrb {
+  bottom: 45%;
+  box-shadow: 0 0 12px 5px currentColor;
+  animation: float-orb var(--dur, 1.0s) ease-out forwards;
+}
+@keyframes float-orb {
+  0%   { transform: translateX(0)         translateY(0)     scale(1.5); opacity: 1; }
+  30%  { opacity: 0.9; }
+  100% { transform: translateX(var(--dx)) translateY(-310px) scale(0);   opacity: 0; }
+}
+
+/* MR — nova burst: radiates outward from center in all directions */
+.particleNova {
+  top: 50%;
+  left: 50%;
+  box-shadow: 0 0 10px 4px currentColor;
+  animation: nova-burst var(--dur, 0.9s) ease-out forwards;
+}
+@keyframes nova-burst {
+  0%   { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(0px)   scale(2);  opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(220px)  scale(0);  opacity: 0; }
 }
 
 /* ─── Modal container ─────────────────────────────────────────────────────── */
