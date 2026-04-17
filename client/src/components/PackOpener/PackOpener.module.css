@@ -11,6 +11,15 @@
   overflow: hidden;
 }
 
+/* ─── Ambient fade-in wrapper ─────────────────────────────────────────────── */
+.ambientFadeIn {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  animation: fade-in 1s ease forwards;
+}
+
 /* ─── Ambient glow — rarity-specific, loops while SR+ cards are shown ────── */
 .ambientBase {
   position: absolute;
@@ -49,26 +58,27 @@
   50%       { opacity: 1.0;  transform: scale(1.07); }
 }
 
-/* UR — slow-spinning light rays */
+/* UR — slow-spinning light rays (inset:0 avoids edge artifacts from oversized element) */
 .urRays {
   position: absolute;
-  inset: -100%;
+  inset: 0;
   z-index: 1;
   pointer-events: none;
+  transform-origin: center center;
   background: conic-gradient(
-    from 0deg,
-    transparent 0deg,   rgba(251,191,36,0.07) 5deg,  transparent 10deg,
-    transparent 28deg,  rgba(251,191,36,0.05) 33deg,  transparent 38deg,
-    transparent 58deg,  rgba(251,191,36,0.08) 63deg,  transparent 68deg,
-    transparent 88deg,  rgba(251,191,36,0.04) 93deg,  transparent 98deg,
-    transparent 118deg, rgba(251,191,36,0.07) 123deg, transparent 128deg,
-    transparent 148deg, rgba(251,191,36,0.05) 153deg, transparent 158deg,
-    transparent 178deg, rgba(251,191,36,0.08) 183deg, transparent 188deg,
-    transparent 208deg, rgba(251,191,36,0.04) 213deg, transparent 218deg,
-    transparent 238deg, rgba(251,191,36,0.07) 243deg, transparent 248deg,
-    transparent 268deg, rgba(251,191,36,0.05) 273deg, transparent 278deg,
-    transparent 298deg, rgba(251,191,36,0.06) 303deg, transparent 308deg,
-    transparent 328deg, rgba(251,191,36,0.04) 333deg, transparent 338deg
+    from 0deg at 50% 50%,
+    transparent 0deg,   rgba(251,191,36,0.06) 4deg,  transparent 9deg,
+    transparent 28deg,  rgba(251,191,36,0.04) 32deg,  transparent 37deg,
+    transparent 57deg,  rgba(251,191,36,0.07) 61deg,  transparent 66deg,
+    transparent 87deg,  rgba(251,191,36,0.04) 91deg,  transparent 96deg,
+    transparent 117deg, rgba(251,191,36,0.06) 121deg, transparent 126deg,
+    transparent 147deg, rgba(251,191,36,0.04) 151deg, transparent 156deg,
+    transparent 177deg, rgba(251,191,36,0.07) 181deg, transparent 186deg,
+    transparent 207deg, rgba(251,191,36,0.04) 211deg, transparent 216deg,
+    transparent 237deg, rgba(251,191,36,0.06) 241deg, transparent 246deg,
+    transparent 267deg, rgba(251,191,36,0.04) 271deg, transparent 276deg,
+    transparent 297deg, rgba(251,191,36,0.05) 301deg, transparent 306deg,
+    transparent 327deg, rgba(251,191,36,0.04) 331deg, transparent 336deg
   );
   animation: ur-rays-spin 14s linear infinite;
 }
@@ -104,24 +114,11 @@
   100% { opacity: 0.8; filter: hue-rotate(100deg); }
 }
 
-/* ─── Rarity flash (on card reveal) ──────────────────────────────────────── */
-.rarityFlash {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  animation: rarity-flash 0.7s ease-out forwards;
-}
-.flashSR  { background: radial-gradient(ellipse at center, rgba(251,146,60,0.62) 0%, transparent 65%); }
-.flashSSR { background: radial-gradient(ellipse at center, rgba(239,68,68,0.78) 0%, transparent 65%); }
-.flashUR  { background: radial-gradient(ellipse at center, rgba(251,191,36,0.88) 0%, transparent 65%); }
-.flashMR  { background: radial-gradient(ellipse at center, rgba(192,132,252,0.95) 0%, transparent 65%); }
-
-/* ─── Particle layer ──────────────────────────────────────────────────────── */
+/* ─── Particle layer — z-index above modal so particles float over cards ─── */
 .particleLayer {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 15;
   pointer-events: none;
   display: flex;
   align-items: center;

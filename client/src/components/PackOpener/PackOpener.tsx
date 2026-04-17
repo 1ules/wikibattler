@@ -74,7 +74,6 @@ interface PackOpenerProps {
 export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   const [phase, setPhase]               = useState<Phase>(isCharging ? 'charging' : 'sealed');
   const [revealed, setRevealed]         = useState<boolean[]>([]);
-  const [flashRarity, setFlashRarity]   = useState<string | null>(null);
   const [floatParticles, setFloatParticles] = useState<FloatParticle[]>([]);
   const [showReadyBurst, setShowReadyBurst] = useState(false);
   const [peakRarity, setPeakRarity]     = useState<string | null>(null);
@@ -161,11 +160,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     return () => { if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function triggerFlash(rarity: string) {
-    setFlashRarity(rarity);
-    setTimeout(() => setFlashRarity(null), 700);
-  }
-
   function startReveal() {
     revealTimersRef.current.forEach(clearTimeout);
     const current = cardsRef.current;
@@ -178,7 +172,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
         });
         const rarity = uc.card.rarity;
         if (FLASH_RARITIES.has(rarity)) {
-          triggerFlash(rarity);
           spawnParticles(rarity, false);
           setPeakRarity(prev => {
             const prevIdx = RARITY_ORDER.indexOf(prev ?? '');
@@ -200,7 +193,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     if (novaTimerRef.current)   clearInterval(novaTimerRef.current);
     revealTimersRef.current.forEach(clearTimeout);
     revealTimersRef.current = [];
-    setFlashRarity(null);
     setFloatParticles([]);
     setShowReadyBurst(false);
     setPhase('done');
@@ -224,18 +216,13 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
 
   return (
     <div className={styles.overlay} aria-modal="true" role="dialog">
-      {/* Rarity-specific ambient background — loops until closed */}
+      {/* Rarity-specific ambient background — fades in smoothly, loops until closed */}
       {showCards && peakRarity && FLASH_RARITIES.has(peakRarity) && (
-        <>
+        <div className={styles.ambientFadeIn}>
           <div className={`${styles.ambientBase} ${styles[`ambient${peakRarity}`] ?? ''}`} />
           {peakRarity === 'UR' && <div className={styles.urRays} />}
           {peakRarity === 'MR' && <div className={styles.mrColorShift} />}
-        </>
-      )}
-
-      {/* Per-card reveal flash */}
-      {flashRarity && (
-        <div className={`${styles.rarityFlash} ${styles[`flash${flashRarity}`] ?? ''}`} />
+        </div>
       )}
 
       <div className={styles.particleLayer} aria-hidden="true">
