@@ -179,25 +179,27 @@
   border-radius: var(--radius-card);
 }
 
-/* ─── Foil overlay — MR ─────────────────────────────────────────────────────── */
+/* ─── Foil overlay — MR (cosmic particles, no sweep) ───────────────────────── */
 .card.foil-mr::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(
-    110deg,
-    transparent 10%,
-    rgba(168,85,247,0.3) 30%,
-    rgba(236,72,153,0.35) 45%,
-    rgba(99,102,241,0.3) 60%,
-    rgba(6,182,212,0.2) 75%,
-    transparent 90%
-  );
-  background-size: 200% 100%;
-  animation: foil-sweep-mr 2.5s linear infinite;
   border-radius: var(--radius-card);
+  background:
+    radial-gradient(circle 16px at 22% 18%, rgba(192,132,252,0.9) 0%, transparent 100%),
+    radial-gradient(circle 10px at 74% 28%, rgba(236,72,153,0.85) 0%, transparent 100%),
+    radial-gradient(circle 20px at 50% 58%, rgba(99,102,241,0.80) 0%, transparent 100%),
+    radial-gradient(circle  8px at 84% 46%, rgba(168,85,247,0.90) 0%, transparent 100%),
+    radial-gradient(circle 12px at 16% 76%, rgba(244,114,182,0.75) 0%, transparent 100%),
+    radial-gradient(circle 11px at 60% 86%, rgba(139,92,246,0.80) 0%, transparent 100%),
+    radial-gradient(circle  7px at 88% 86%, rgba(192,132,252,0.70) 0%, transparent 100%);
+  animation: mr-cosmic-a 3.4s ease-in-out infinite;
+}
+@keyframes mr-cosmic-a {
+  0%, 100% { opacity: 0.07; }
+  50%       { opacity: 0.55; }
 }
 
 .card.foil-mr::after {
@@ -206,9 +208,19 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 30%, rgba(168,85,247,0.18) 0%, transparent 70%);
-  animation: shimmer-mr 2s ease-in-out infinite;
   border-radius: var(--radius-card);
+  background:
+    radial-gradient(circle 14px at 64% 22%, rgba(236,72,153,0.85) 0%, transparent 100%),
+    radial-gradient(circle  9px at 34% 44%, rgba(99,102,241,0.80) 0%, transparent 100%),
+    radial-gradient(circle 18px at 78% 68%, rgba(192,132,252,0.75) 0%, transparent 100%),
+    radial-gradient(circle  7px at 44% 90%, rgba(168,85,247,0.85) 0%, transparent 100%),
+    radial-gradient(circle 13px at 90% 16%, rgba(244,114,182,0.75) 0%, transparent 100%),
+    radial-gradient(circle  8px at 28% 94%, rgba(139,92,246,0.70) 0%, transparent 100%);
+  animation: mr-cosmic-b 2.9s ease-in-out 1.7s infinite;
+}
+@keyframes mr-cosmic-b {
+  0%, 100% { opacity: 0.07; }
+  50%       { opacity: 0.50; }
 }
 
 /* ─── Card Header ───────────────────────────────────────────────────────────── */
@@ -259,9 +271,7 @@
 .rarityBadge-UR  {
   color: var(--rarity-ur);
   border-color: var(--rarity-ur);
-  background: linear-gradient(90deg, rgba(0,0,0,0.6), rgba(251,191,36,0.15));
-  background-size: 200% auto;
-  animation: gold-shimmer 3s linear infinite;
+  background: rgba(251,191,36,0.10);
 }
 .rarityBadge-MR  { color: var(--rarity-mr);  border-color: var(--rarity-mr); }
 

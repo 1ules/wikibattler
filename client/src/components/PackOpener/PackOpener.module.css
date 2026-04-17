@@ -38,24 +38,24 @@
   50%       { opacity: 0.95; }
 }
 
-/* SSR — red inferno with scale breathe */
+/* SSR — red inferno, faster pulse */
 .ambientSSR {
-  background: radial-gradient(ellipse 82% 62% at center, rgba(239,68,68,0.42) 0%, rgba(251,146,60,0.12) 55%, transparent 78%);
+  background: radial-gradient(ellipse 120% 120% at center, rgba(239,68,68,0.38) 0%, rgba(251,146,60,0.10) 55%, transparent 100%);
   animation: ssr-pulse 1.8s ease-in-out infinite;
 }
 @keyframes ssr-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(0.96); }
-  50%       { opacity: 1.0; transform: scale(1.05); }
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1.0; }
 }
 
 /* UR — gold radiance, punchy pulse */
 .ambientUR {
-  background: radial-gradient(ellipse 90% 65% at center, rgba(251,191,36,0.52) 0%, rgba(200,168,75,0.16) 55%, transparent 78%);
+  background: radial-gradient(ellipse 120% 120% at center, rgba(251,191,36,0.45) 0%, rgba(200,168,75,0.12) 55%, transparent 100%);
   animation: ur-pulse 1.4s ease-in-out infinite;
 }
 @keyframes ur-pulse {
-  0%, 100% { opacity: 0.38; transform: scale(0.93); }
-  50%       { opacity: 1.0;  transform: scale(1.07); }
+  0%, 100% { opacity: 0.38; }
+  50%       { opacity: 1.0;  }
 }
 
 /* UR — slow-spinning light rays
@@ -90,32 +90,18 @@
   to { transform: rotate(360deg); }
 }
 
-/* MR — purple storm with hue cycling */
+/* MR — purple storm with hue cycling, gradient always extends beyond viewport */
 .ambientMR {
-  background: radial-gradient(ellipse 100% 70% at center, rgba(192,132,252,0.58) 0%, rgba(99,102,241,0.22) 55%, transparent 80%);
+  background: radial-gradient(ellipse 140% 140% at center, rgba(192,132,252,0.50) 0%, rgba(99,102,241,0.18) 55%, transparent 100%);
   animation: mr-pulse 1.2s ease-in-out infinite, mr-hue 4s linear infinite;
 }
 @keyframes mr-pulse {
-  0%, 100% { opacity: 0.45; transform: scale(0.92); }
-  50%       { opacity: 1.0;  transform: scale(1.08); }
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 1.0;  }
 }
 @keyframes mr-hue {
   0%   { filter: hue-rotate(0deg); }
   100% { filter: hue-rotate(360deg); }
-}
-
-/* MR — secondary color-shift layer */
-.mrColorShift {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: radial-gradient(ellipse 120% 80% at center, rgba(236,72,153,0.22) 0%, transparent 65%);
-  animation: mr-shift 2.2s ease-in-out infinite alternate;
-}
-@keyframes mr-shift {
-  0%   { opacity: 0.3; filter: hue-rotate(0deg); }
-  100% { opacity: 0.8; filter: hue-rotate(100deg); }
 }
 
 /* ─── Particle layer — z-index above modal so particles float over cards ─── */

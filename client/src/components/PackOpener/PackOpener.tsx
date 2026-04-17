@@ -226,7 +226,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
         <div className={styles.ambientFadeIn}>
           <div className={`${styles.ambientBase} ${styles[`ambient${peakRarity}`] ?? ''}`} />
           {peakRarity === 'UR' && <div className={styles.urRays} />}
-          {peakRarity === 'MR' && <div className={styles.mrColorShift} />}
         </div>
       )}
 
