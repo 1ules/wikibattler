@@ -45,6 +45,7 @@ export function Card({
   const foilClass =
     isFoil && card.rarity === 'MR'  ? styles['foil-mr']  :
     isFoil && card.rarity === 'SSR' ? styles['foil-ssr'] :
+    isFoil && card.rarity === 'UR'  ? styles['foil-ur']  :
     '';
 
   const themeClass       = styles[`theme-${card.rarity}`]       ?? '';

@@ -26,6 +26,12 @@
   100% { opacity: 0.35; }
 }
 
+/* ─── Card Foil — UR ────────────────────────────────────────────────────────── */
+@keyframes foil-sweep-ur {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
 /* ─── UR border shimmer ─────────────────────────────────────────────────────── */
 @keyframes border-glow-ur {
   0%, 100% { box-shadow: 0 0 12px 4px rgba(251,191,36,0.4), inset 0 0 30px rgba(251,191,36,0.06); }
