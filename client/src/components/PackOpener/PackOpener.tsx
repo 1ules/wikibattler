@@ -63,7 +63,7 @@ const CHARGE_PARTICLES = Array.from({ length: 28 }, (_, i) => ({
 }));
 
 type ParticleType = 'Ember' | 'Spark' | 'Star' | 'Orb' | 'Nova';
-interface FloatParticle { id: number; dx: number; angle: number; color: string; size: number; type: ParticleType; dur: number; }
+interface FloatParticle { id: number; px: number; py: number; dx: number; angle: number; color: string; size: number; type: ParticleType; dur: number; }
 
 interface PackOpenerProps {
   cards: UserCard[];
@@ -101,9 +101,14 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     const cfg = RARITY_CONFIG[rarity as keyof typeof RARITY_CONFIG];
     if (!cfg) return;
     const count = nova ? 28 : cfg.particleCount;
+    // All particles in a nova burst share the same spawn point
+    const novaPx = Math.random() * 80 + 10;
+    const novaPy = Math.random() * 75 + 10;
     const newParticles: FloatParticle[] = Array.from({ length: count }, (_, i) => ({
-      id: ++particleId.current,
-      dx:    nova ? 0 : (Math.random() - 0.5) * cfg.dxRange * 2,
+      id:    ++particleId.current,
+      px:    nova ? novaPx : Math.random() * 90 + 5,
+      py:    nova ? novaPy : Math.random() * 40 + 5,
+      dx:    nova ? 0 : (Math.random() - 0.5) * 40,
       angle: nova ? (360 / count) * i : 0,
       color: cfg.colors[Math.floor(Math.random() * cfg.colors.length)] ?? '#fff',
       size:  cfg.sizeMin + Math.random() * (cfg.sizeMax - cfg.sizeMin),
@@ -231,6 +236,8 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
             key={p.id}
             className={`${styles.floatParticle} ${styles[`particle${p.type}`] ?? ''}`}
             style={{
+              '--px':    `${p.px}%`,
+              '--py':    `${p.py}%`,
               '--dx':    `${p.dx}px`,
               '--angle': `${p.angle}deg`,
               '--dur':   `${p.dur}s`,
