@@ -30,8 +30,9 @@ export function createApp(): Express {
       await prisma.$queryRaw`SELECT 1`;
       res.json({ ok: true, db: 'connected' });
     } catch (err) {
-      const msg = err instanceof Error ? err.message.split('\n')[0] : String(err);
-      res.status(503).json({ ok: false, db: 'unreachable', error: msg });
+      const raw = err instanceof Error ? err.message : String(err);
+      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+      res.status(503).json({ ok: false, db: 'unreachable', error: lines.join(' | '), url: env.DATABASE_URL.replace(/:([^@]+)@/, ':***@') });
     }
   });
 
