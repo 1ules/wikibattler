@@ -46,6 +46,36 @@ function getGhostCode(userId: string): string {
   return `${clean.slice(0, 4)}-${clean.slice(4, 8)}`;
 }
 
+interface TitleDef { id: string; text: string; earn: string; }
+
+const TITLES: TitleDef[] = [
+  { id: 'wanderer',      text: 'Wanderer',           earn: 'Default — always available' },
+  { id: 'collector',     text: 'Card Collector',      earn: 'Collect 50 cards' },
+  { id: 'hoarder',       text: 'Hoarder',             earn: 'Collect 200 cards' },
+  { id: 'fortunate',     text: 'The Fortunate',       earn: 'Pull an MR card' },
+  { id: 'champion',      text: 'Champion',            earn: 'Win 100 battles' },
+  { id: 'unstoppable',   text: 'The Unstoppable',     earn: 'Win 20 battles in a row' },
+  { id: 'raid-veteran',  text: 'Raid Veteran',        earn: 'Complete 10 raids' },
+  { id: 'merchant',      text: 'Merchant',            earn: 'Complete 10 marketplace trades' },
+  { id: 'scholar',       text: 'Scholar',             earn: 'Own cards from 10 different traits' },
+  { id: 'completionist', text: 'Completionist',       earn: 'Own a card of every rarity' },
+  { id: 'veteran',       text: 'Veteran',             earn: 'Play for 30 days' },
+  { id: 'legend',        text: 'Legend',              earn: 'Reach Diamond rank' },
+];
+
+const SUBTITLES: TitleDef[] = [
+  { id: 'starting-out',  text: 'Just starting out',       earn: 'Default — always available' },
+  { id: 'building',      text: 'Building my collection',  earn: 'Collect 20 cards' },
+  { id: 'wiki-warrior',  text: 'Wiki warrior',            earn: 'Win 10 battles' },
+  { id: 'ghost',         text: 'Ghost of battles past',   earn: 'Complete 5 ghost battles' },
+  { id: 'searching',     text: 'Searching for knowledge', earn: 'Open 20 packs' },
+  { id: 'encyclopedic',  text: 'The encyclopedic',        earn: 'Collect 100 cards' },
+  { id: 'rarities',      text: 'Master of rarities',      earn: 'Own a UR or MR card' },
+  { id: 'feared',        text: 'Feared by all',           earn: 'Reach Gold rank' },
+  { id: 'trader',        text: 'Trading legends',         earn: 'Complete 5 marketplace trades' },
+  { id: 'raid-slayer',   text: 'Raid boss slayer',        earn: 'Complete a raid' },
+];
+
 function modalQidTags(chain: QidNode[]): QidNode[] {
   const seen = new Set<string>();
   return chain
@@ -119,8 +149,14 @@ export function Collection() {
 
   // Profile state
   const [profileDisplayName, setProfileDisplayName] = useState(() => localStorage.getItem('wb-display-name') ?? '');
-  const [profileTitle, setProfileTitle]             = useState(() => localStorage.getItem('wb-title') ?? 'Wanderer');
-  const [profileSubtitle, setProfileSubtitle]       = useState(() => localStorage.getItem('wb-subtitle') ?? 'Just starting out');
+  const [profileTitle, setProfileTitle]             = useState(() => {
+    const s = localStorage.getItem('wb-title') ?? 'wanderer';
+    return TITLES.find(t => t.id === s) ? s : (TITLES.find(t => t.text === s)?.id ?? 'wanderer');
+  });
+  const [profileSubtitle, setProfileSubtitle]       = useState(() => {
+    const s = localStorage.getItem('wb-subtitle') ?? 'starting-out';
+    return SUBTITLES.find(t => t.id === s) ? s : (SUBTITLES.find(t => t.text === s)?.id ?? 'starting-out');
+  });
   const [profileBg, setProfileBg]                   = useState(() => localStorage.getItem('wb-bg') ?? 'default');
   const [ghostTeamIds, setGhostTeamIds]             = useState<(string | null)[]>(() => {
     try { const s = localStorage.getItem('wb-ghost-team'); return s ? (JSON.parse(s) as (string|null)[]) : [null,null,null,null,null]; }
@@ -128,8 +164,10 @@ export function Collection() {
   });
   const [isEditing, setIsEditing]             = useState(false);
   const [editDisplayName, setEditDisplayName] = useState('');
-  const [editTitle, setEditTitle]             = useState('');
-  const [editSubtitle, setEditSubtitle]       = useState('');
+  const [editTitle, setEditTitle]             = useState('wanderer');
+  const [editSubtitle, setEditSubtitle]       = useState('starting-out');
+  const [titlePickerOpen, setTitlePickerOpen]       = useState(false);
+  const [subtitlePickerOpen, setSubtitlePickerOpen] = useState(false);
   const [editBg, setEditBg]                   = useState('default');
   const [editTeamIds, setEditTeamIds]         = useState<(string | null)[]>([null,null,null,null,null]);
   const [activeSlot, setActiveSlot]           = useState<number | null>(null);
@@ -222,6 +260,32 @@ export function Collection() {
     return (collection.data as UserCard[]).filter(uc => !inTeam.has(uc.id));
   }, [collection?.data, editTeamIds]);
 
+  const unlockedTitleIds = useMemo(() => {
+    const cards = (collection?.data ?? []) as UserCard[];
+    const count = cards.length;
+    const hasMR = cards.some(uc => uc.card.rarity === 'MR');
+    const traitCount = new Set(cards.flatMap(uc => (uc.card.qidChain ?? []).filter(n => !QID_BLOCKLIST.has(n.qid)).map(n => n.label))).size;
+    const allRarities = ['C','UC','R','SR','SSR','UR','MR'].every(r => cards.some(uc => uc.card.rarity === r));
+    const unlocked = new Set<string>(['wanderer']);
+    if (count >= 50)   unlocked.add('collector');
+    if (count >= 200)  unlocked.add('hoarder');
+    if (hasMR)         unlocked.add('fortunate');
+    if (traitCount >= 10) unlocked.add('scholar');
+    if (allRarities)   unlocked.add('completionist');
+    return unlocked;
+  }, [collection?.data]);
+
+  const unlockedSubtitleIds = useMemo(() => {
+    const cards = (collection?.data ?? []) as UserCard[];
+    const count = cards.length;
+    const hasUR = cards.some(uc => uc.card.rarity === 'UR' || uc.card.rarity === 'MR');
+    const unlocked = new Set<string>(['starting-out']);
+    if (count >= 20)  unlocked.add('building');
+    if (count >= 100) unlocked.add('encyclopedic');
+    if (hasUR)        unlocked.add('rarities');
+    return unlocked;
+  }, [collection?.data]);
+
   function toggleRarity(rarity: string) {
     setEnabledRarities(prev => {
       const allOn = prev.size === ALL_RARITIES.length;
@@ -269,13 +333,13 @@ export function Collection() {
   function saveProfile() {
     const name = editDisplayName.trim();
     localStorage.setItem('wb-display-name', name);
-    localStorage.setItem('wb-title', editTitle.trim() || 'Wanderer');
-    localStorage.setItem('wb-subtitle', editSubtitle.trim());
+    localStorage.setItem('wb-title', editTitle || 'wanderer');
+    localStorage.setItem('wb-subtitle', editSubtitle || 'starting-out');
     localStorage.setItem('wb-bg', editBg);
     localStorage.setItem('wb-ghost-team', JSON.stringify(editTeamIds));
     setProfileDisplayName(name);
-    setProfileTitle(editTitle.trim() || 'Wanderer');
-    setProfileSubtitle(editSubtitle.trim());
+    setProfileTitle(editTitle || 'wanderer');
+    setProfileSubtitle(editSubtitle || 'starting-out');
     setProfileBg(editBg);
     setGhostTeamIds(editTeamIds);
     setIsEditing(false);
@@ -577,16 +641,22 @@ export function Collection() {
               <>
                 <input className={styles.editNameInput} value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)} placeholder="Display name" maxLength={32} />
                 <div className={styles.editTitleRow}>
-                  <input className={styles.editTitleInput} value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="Title" maxLength={32} />
-                  <input className={styles.editSubInput} value={editSubtitle} onChange={e => setEditSubtitle(e.target.value)} placeholder="Subtitle" maxLength={64} />
+                  <button className={styles.editTitlePicker} onClick={() => setTitlePickerOpen(true)}>
+                    <span>{TITLES.find(t => t.id === editTitle)?.text ?? 'Wanderer'}</span>
+                    <span className={styles.editPickerArrow}>▼</span>
+                  </button>
+                  <button className={styles.editTitlePicker} onClick={() => setSubtitlePickerOpen(true)}>
+                    <span>{SUBTITLES.find(t => t.id === editSubtitle)?.text ?? 'Just starting out'}</span>
+                    <span className={styles.editPickerArrow}>▼</span>
+                  </button>
                 </div>
               </>
             ) : (
               <>
                 <span className={styles.profileName}>{displayName}</span>
                 <div className={styles.profileTitleRow}>
-                  <span className={styles.profileTitle}>{profileTitle}</span>
-                  {profileSubtitle && <span className={styles.profileSubtitle}>· {profileSubtitle}</span>}
+                  <span className={styles.profileTitle}>{TITLES.find(t => t.id === profileTitle)?.text ?? 'Wanderer'}</span>
+                  {profileSubtitle && <span className={styles.profileSubtitle}>· {SUBTITLES.find(t => t.id === profileSubtitle)?.text ?? ''}</span>}
                 </div>
               </>
             )}
@@ -811,6 +881,70 @@ export function Collection() {
               ? `${filteredCollection.length} cards`
               : `${filteredCollection.length} of ${collection?.data.length} cards`}
           </span>
+        </div>
+      )}
+
+      {/* ── Title picker modal ── */}
+      {titlePickerOpen && (
+        <div className={styles.pickerOverlay} onClick={() => setTitlePickerOpen(false)} role="dialog" aria-modal="true" aria-label="Choose a title">
+          <div className={styles.pickerModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.pickerModalHeader}>
+              <span className={styles.pickerModalTitle}>Titles</span>
+              <button className={styles.pickerModalClose} onClick={() => setTitlePickerOpen(false)}>✕</button>
+            </div>
+            <p className={styles.pickerModalSub}>Earn titles through gameplay and achievements.</p>
+            <div className={styles.pickerGrid}>
+              {TITLES.map(t => {
+                const unlocked = unlockedTitleIds.has(t.id);
+                const selected = editTitle === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    className={[styles.pickerOption, selected ? styles.pickerOptionSelected : '', !unlocked ? styles.pickerOptionLocked : ''].filter(Boolean).join(' ')}
+                    onClick={() => { if (unlocked) { setEditTitle(t.id); setTitlePickerOpen(false); } }}
+                    disabled={!unlocked}
+                    title={unlocked ? t.text : `🔒 ${t.earn}`}
+                  >
+                    {!unlocked && <span className={styles.pickerLock}>🔒</span>}
+                    <span className={styles.pickerOptionText}>{t.text}</span>
+                    <span className={styles.pickerOptionEarn}>{t.earn}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Subtitle picker modal ── */}
+      {subtitlePickerOpen && (
+        <div className={styles.pickerOverlay} onClick={() => setSubtitlePickerOpen(false)} role="dialog" aria-modal="true" aria-label="Choose a subtitle">
+          <div className={styles.pickerModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.pickerModalHeader}>
+              <span className={styles.pickerModalTitle}>Subtitles</span>
+              <button className={styles.pickerModalClose} onClick={() => setSubtitlePickerOpen(false)}>✕</button>
+            </div>
+            <p className={styles.pickerModalSub}>Earn subtitles through gameplay and achievements.</p>
+            <div className={styles.pickerGrid}>
+              {SUBTITLES.map(t => {
+                const unlocked = unlockedSubtitleIds.has(t.id);
+                const selected = editSubtitle === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    className={[styles.pickerOption, selected ? styles.pickerOptionSelected : '', !unlocked ? styles.pickerOptionLocked : ''].filter(Boolean).join(' ')}
+                    onClick={() => { if (unlocked) { setEditSubtitle(t.id); setSubtitlePickerOpen(false); } }}
+                    disabled={!unlocked}
+                    title={unlocked ? t.text : `🔒 ${t.earn}`}
+                  >
+                    {!unlocked && <span className={styles.pickerLock}>🔒</span>}
+                    <span className={styles.pickerOptionText}>{t.text}</span>
+                    <span className={styles.pickerOptionEarn}>{t.earn}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
