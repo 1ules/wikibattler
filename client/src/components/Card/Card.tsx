@@ -3,7 +3,7 @@ import type { UserCard } from '@wikibattler/shared';
 import { RARITY_DISPLAY, QID_BLOCKLIST } from '@wikibattler/shared';
 import styles from './Card.module.css';
 
-const MAX_VISIBLE_TAGS = 5;
+const MAX_VISIBLE_TAGS = 3;
 
 // Pull human-readable labels from the qidChain for display
 function qidLabels(card: import('@wikibattler/shared').Card): string[] {

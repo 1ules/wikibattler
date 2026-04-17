@@ -3,9 +3,8 @@ import type { UserCard } from '@wikibattler/shared';
 import { Card } from '../Card/Card.js';
 import styles from './PackOpener.module.css';
 
-type Phase = 'sealed' | 'shaking' | 'bursting' | 'revealing' | 'done';
+type Phase = 'charging' | 'ready-fanfare' | 'sealed' | 'shaking' | 'bursting' | 'revealing' | 'done';
 
-// Rarities that trigger a flash effect
 const FLASH_RARITIES = new Set(['SR', 'SSR', 'UR', 'MR']);
 const FLASH_COLORS: Record<string, string> = {
   SR:  'rgba(251,146,60,0.22)',
@@ -15,31 +14,58 @@ const FLASH_COLORS: Record<string, string> = {
 };
 const PARTICLE_COUNTS: Record<string, number> = { SR: 0, SSR: 6, UR: 12, MR: 20 };
 
-interface Particle { id: number; dx: number; color: string; size: number; }
+// Deterministic charge particles (stable across renders)
+const CHARGE_PARTICLES = Array.from({ length: 28 }, (_, i) => ({
+  id: i,
+  angle: (360 / 28) * i,
+  dist: 140 + (i % 3) * 30,
+  size: 3 + (i % 4),
+  color: (['#c084fc', '#a855f7', '#6366f1', '#60a5fa', '#c8a84b', '#ec4899', '#818cf8'] as const)[i % 7],
+  dur: 1.4 + (i % 5) * 0.2,
+  delay: -((i / 28) * 1.4),
+}));
+
+interface FloatParticle { id: number; dx: number; color: string; size: number; }
 
 interface PackOpenerProps {
-  cards: UserCard[];
+  cards: UserCard[];     // empty while charging, populated when ready
+  isCharging: boolean;   // controlled by parent
   onClose: () => void;
 }
 
-export function PackOpener({ cards, onClose }: PackOpenerProps) {
-  const [phase, setPhase] = useState<Phase>('sealed');
-  const [revealed, setRevealed] = useState<boolean[]>(() => cards.map(() => false));
+export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
+  const [phase, setPhase] = useState<Phase>(isCharging ? 'charging' : 'sealed');
+  const [revealed, setRevealed] = useState<boolean[]>([]);
   const [flashColor, setFlashColor] = useState<string | null>(null);
-  const [particles, setParticles] = useState<Particle[]>([]);
+  const [floatParticles, setFloatParticles] = useState<FloatParticle[]>([]);
+  const [showReadyBurst, setShowReadyBurst] = useState(false);
   const particleId = useRef(0);
-
-  // Phase-transition timer
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Reveal timers stored separately so phase cleanup never cancels them
   const revealTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const cardsRef = useRef(cards);
 
-  // Cleanup all reveal timers on unmount
+  useEffect(() => { cardsRef.current = cards; }, [cards]);
+
   useEffect(() => {
-    return () => { revealTimersRef.current.forEach(clearTimeout); };
+    return () => {
+      revealTimersRef.current.forEach(clearTimeout);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
-  // Auto-advance only after user click (shaking → bursting → revealing)
+  // When parent signals charging is done → play ready fanfare then unlock
+  useEffect(() => {
+    if (!isCharging && phase === 'charging') {
+      setPhase('ready-fanfare');
+      setShowReadyBurst(true);
+      timerRef.current = setTimeout(() => {
+        setShowReadyBurst(false);
+        setPhase('sealed');
+      }, 900);
+    }
+  }, [isCharging]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance shake → burst → reveal
   useEffect(() => {
     if (phase === 'shaking') {
       timerRef.current = setTimeout(() => setPhase('bursting'), 800);
@@ -52,7 +78,7 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function spawnParticles(rarity: string) {
+  function spawnFloatParticles(rarity: string) {
     const count = PARTICLE_COUNTS[rarity] ?? 0;
     if (count === 0) return;
     const colors = {
@@ -60,16 +86,15 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
       UR:  ['#fbbf24', '#f0c860', '#fde68a'],
       MR:  ['#c084fc', '#ec4899', '#6366f1', '#a855f7'],
     }[rarity] ?? ['#fff'];
-
-    const newParticles: Particle[] = Array.from({ length: count }, () => ({
+    const newParticles: FloatParticle[] = Array.from({ length: count }, () => ({
       id: ++particleId.current,
       dx: (Math.random() - 0.5) * 80,
       color: colors[Math.floor(Math.random() * colors.length)] ?? '#fff',
       size: 4 + Math.random() * 6,
     }));
-    setParticles((p) => [...p, ...newParticles]);
+    setFloatParticles(p => [...p, ...newParticles]);
     setTimeout(() => {
-      setParticles((p) => p.filter((x) => !newParticles.some((n) => n.id === x.id)));
+      setFloatParticles(p => p.filter(x => !newParticles.some(n => n.id === x.id)));
     }, 1200);
   }
 
@@ -82,9 +107,10 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
 
   function startReveal() {
     revealTimersRef.current.forEach(clearTimeout);
-    revealTimersRef.current = cards.map((uc, i) =>
+    const current = cardsRef.current;
+    revealTimersRef.current = current.map((uc, i) =>
       setTimeout(() => {
-        setRevealed((prev) => {
+        setRevealed(prev => {
           const next = [...prev];
           next[i] = true;
           return next;
@@ -92,9 +118,9 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
         const rarity = uc.card.rarity;
         if (FLASH_RARITIES.has(rarity)) {
           triggerFlash(rarity);
-          spawnParticles(rarity);
+          spawnFloatParticles(rarity);
         }
-        if (i === cards.length - 1) {
+        if (i === current.length - 1) {
           const t = setTimeout(() => setPhase('done'), 400);
           revealTimersRef.current.push(t);
         }
@@ -107,21 +133,24 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
     revealTimersRef.current.forEach(clearTimeout);
     revealTimersRef.current = [];
     setFlashColor(null);
-    setParticles([]);
+    setFloatParticles([]);
+    setShowReadyBurst(false);
     setPhase('done');
-    setRevealed(cards.map(() => true));
+    setRevealed(cardsRef.current.map(() => true));
   }
 
   function handlePackClick() {
-    if (phase === 'sealed') setPhase('shaking');
+    if (phase !== 'sealed') return;
+    setRevealed(cardsRef.current.map(() => false));
+    setPhase('shaking');
   }
 
-  const showPack  = phase === 'sealed' || phase === 'shaking' || phase === 'bursting';
+  const isChargingPhase = phase === 'charging' || phase === 'ready-fanfare';
+  const showPack  = isChargingPhase || phase === 'sealed' || phase === 'shaking' || phase === 'bursting';
   const showCards = phase === 'revealing' || phase === 'done';
 
   return (
     <div className={styles.overlay} aria-modal="true" role="dialog">
-      {/* Rarity flash */}
       {flashColor && (
         <div
           className={styles.rarityFlash}
@@ -129,59 +158,100 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
         />
       )}
 
-      {/* Floating particles */}
       <div className={styles.particleLayer} aria-hidden="true">
-        {particles.map((p) => (
+        {floatParticles.map(p => (
           <div
             key={p.id}
             className={styles.floatParticle}
-            style={{
-              '--dx': `${p.dx}px`,
-              background: p.color,
-              width: p.size,
-              height: p.size,
-            } as React.CSSProperties}
+            style={{ '--dx': `${p.dx}px`, background: p.color, width: p.size, height: p.size } as React.CSSProperties}
           />
         ))}
       </div>
 
       <div className={styles.modal}>
-        {phase !== 'done' && (
+        {(phase === 'revealing' || phase === 'done') && (
           <button className={styles.skipBtn} onClick={handleSkip}>Skip</button>
         )}
 
-        {/* Pack visual */}
         {showPack && (
-          <div
-            className={[
-              styles.packWrap,
-              phase === 'shaking'  ? styles.shaking  : '',
-              phase === 'bursting' ? styles.bursting : '',
-            ].filter(Boolean).join(' ')}
-            onClick={handlePackClick}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && handlePackClick()}
-            aria-label="Open pack"
-          >
-            <div className={styles.pack}>
-              <div className={styles.packGlow} />
-              <div className={styles.packCornerTL} />
-              <div className={styles.packCornerBR} />
-              <div className={styles.packBody}>
-                <span className={styles.packIcon}>✦</span>
-                <span className={styles.packLabel}>WikiBattler</span>
-                <span className={styles.packSub}>Booster Pack</span>
+          <div className={styles.packScene}>
+            {/* Particle ring — centered on the pack */}
+            <div className={styles.packMain}>
+              {isChargingPhase && (
+                <div className={styles.chargeRing} aria-hidden="true">
+                  {CHARGE_PARTICLES.map(p => (
+                    <div
+                      key={p.id}
+                      className={styles.chargeParticle}
+                      style={{
+                        '--angle': `${p.angle}deg`,
+                        '--dist':  `${p.dist}px`,
+                        '--dur':   `${p.dur}s`,
+                        '--cdelay': `${p.delay}s`,
+                        width:  p.size,
+                        height: p.size,
+                        background: p.color,
+                      } as React.CSSProperties}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {showReadyBurst && (
+                <div className={styles.readyBurstRing} aria-hidden="true">
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <div
+                      key={i}
+                      className={styles.readyBurstParticle}
+                      style={{ '--angle': `${i * 15}deg` } as React.CSSProperties}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div
+                className={[
+                  styles.packWrap,
+                  isChargingPhase          ? styles.packCharging   : '',
+                  phase === 'ready-fanfare'? styles.packReadyFlash : '',
+                  phase === 'shaking'      ? styles.shaking        : '',
+                  phase === 'bursting'     ? styles.bursting       : '',
+                ].filter(Boolean).join(' ')}
+                onClick={handlePackClick}
+                role="button"
+                tabIndex={phase === 'sealed' ? 0 : -1}
+                aria-label={phase === 'sealed' ? 'Open pack' : undefined}
+                aria-disabled={phase !== 'sealed'}
+                onKeyDown={(e) => e.key === 'Enter' && handlePackClick()}
+              >
+                <div className={styles.pack}>
+                  <div className={styles.packGlow} />
+                  <div className={styles.packCornerTL} />
+                  <div className={styles.packCornerBR} />
+                  <div className={styles.packBody}>
+                    <span className={[styles.packIcon, isChargingPhase ? styles.packIconCharge : ''].filter(Boolean).join(' ')}>
+                      {phase === 'ready-fanfare' ? '✦' : isChargingPhase ? '◈' : '✦'}
+                    </span>
+                    <span className={styles.packLabel}>WikiBattler</span>
+                    <span className={styles.packSub}>Booster Pack</span>
+                  </div>
+                  <div className={styles.packShine} />
+                </div>
               </div>
-              <div className={styles.packShine} />
             </div>
+
+            {phase === 'charging' && (
+              <p className={styles.chargingText}>Loading booster pack...</p>
+            )}
+            {phase === 'ready-fanfare' && (
+              <p className={styles.readyText}>✦ Pack ready!</p>
+            )}
             {phase === 'sealed' && (
               <p className={styles.packHint}>Click to open!</p>
             )}
           </div>
         )}
 
-        {/* Burst particles */}
         {phase === 'bursting' && (
           <div className={styles.burstParticles}>
             {Array.from({ length: 16 }, (_, i) => (
@@ -194,7 +264,6 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
           </div>
         )}
 
-        {/* Card reveal grid */}
         {showCards && (
           <div className={styles.cardGrid}>
             {cards.map((uc, i) => (
@@ -212,7 +281,6 @@ export function PackOpener({ cards, onClose }: PackOpenerProps) {
           </div>
         )}
 
-        {/* Continue button */}
         {phase === 'done' && (
           <button className={styles.continueBtn} onClick={onClose}>
             Add to Collection

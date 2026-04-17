@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useCollection } from '../../api/useCards.js';
 import { useOpenPack, usePackState, useOpenPityPack } from '../../api/usePacks.js';
 import { Card } from '../../components/Card/Card.js';
 import { PackOpener } from '../../components/PackOpener/PackOpener.js';
 import { usePackStore } from '../../stores/packStore.js';
+import { api } from '../../lib/api.js';
 import type { UserCard } from '@wikibattler/shared';
+import type { QidNode } from '@wikibattler/shared';
 import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD } from '@wikibattler/shared';
 import styles from './Collection.module.css';
 
@@ -22,22 +24,92 @@ export function Collection() {
   const openPack     = useOpenPack();
   const openPityPack = useOpenPityPack();
 
-  const [pendingCards, setPendingCards]   = useState<UserCard[] | null>(null);
-  const [selectedCard, setSelectedCard]   = useState<UserCard | null>(null);
-  const [copiedShare, setCopiedShare]     = useState(false);
+  const [packOpenerOpen, setPackOpenerOpen] = useState(false);
+  const [packCharging, setPackCharging]     = useState(false);
+  const [pendingCards, setPendingCards]     = useState<UserCard[] | null>(null);
+  const [selectedCard, setSelectedCard]     = useState<UserCard | null>(null);
+  const [copiedShare, setCopiedShare]       = useState(false);
+  const pollCancelRef = useRef(false);
 
   usePackState();
 
   async function handleOpenPack() {
+    if (storedPacks < 1 || openPack.isPending) return;
+    setPackOpenerOpen(true);
+    setPackCharging(true);
+    setPendingCards(null);
+    pollCancelRef.current = false;
+
     try {
       const result = await openPack.mutateAsync();
-      setPendingCards(result.cards as UserCard[]);
-    } catch { /* 409 = no packs */ }
+      const userCards = result.cards as UserCard[];
+
+      const allHaveQids = userCards.every(
+        uc => (uc.card.qidChain as unknown[]).length > 0
+      );
+      if (allHaveQids || pollCancelRef.current) {
+        setPendingCards(userCards);
+        setPackCharging(false);
+        return;
+      }
+
+      const cardIds = userCards.map(uc => uc.card.id).join(',');
+      let attempts = 0;
+      const MAX_ATTEMPTS = 10;
+
+      const poll = async () => {
+        if (pollCancelRef.current) return;
+        attempts++;
+        try {
+          const { data } = await api.get<{
+            data: { allReady: boolean; qidData: Record<string, QidNode[]> };
+          }>(`/cards/qids-ready?ids=${cardIds}`);
+          const resp = data.data;
+          if (resp.allReady || attempts >= MAX_ATTEMPTS) {
+            if (!pollCancelRef.current) {
+              const enriched = userCards.map(uc => ({
+                ...uc,
+                card: {
+                  ...uc.card,
+                  qidChain: resp.qidData[uc.card.id] ?? uc.card.qidChain,
+                },
+              })) as UserCard[];
+              setPendingCards(enriched);
+              setPackCharging(false);
+            }
+          } else {
+            setTimeout(poll, 1500);
+          }
+        } catch {
+          if (attempts >= MAX_ATTEMPTS && !pollCancelRef.current) {
+            setPendingCards(userCards);
+            setPackCharging(false);
+          } else if (!pollCancelRef.current) {
+            setTimeout(poll, 1500);
+          }
+        }
+      };
+
+      setTimeout(poll, 1500);
+    } catch {
+      setPackOpenerOpen(false);
+      setPackCharging(false);
+      setPendingCards(null);
+    }
+  }
+
+  function handleClosePackOpener() {
+    pollCancelRef.current = true;
+    setPackOpenerOpen(false);
+    setPendingCards(null);
+    setPackCharging(false);
   }
 
   async function handleOpenPityPack(tier: 'SR' | 'UR') {
     try {
       const result = await openPityPack.mutateAsync(tier);
+      setPackOpenerOpen(true);
+      setPackCharging(false);
       setPendingCards([result.card as UserCard]);
     } catch { /* ignore */ }
   }
@@ -63,8 +135,12 @@ export function Collection() {
   return (
     <div className={styles.page}>
       {/* Pack opener overlay */}
-      {pendingCards && (
-        <PackOpener cards={pendingCards} onClose={() => setPendingCards(null)} />
+      {packOpenerOpen && (
+        <PackOpener
+          cards={pendingCards ?? []}
+          isCharging={packCharging}
+          onClose={handleClosePackOpener}
+        />
       )}
 
       {/* ── Card detail modal ── */}
@@ -153,9 +229,9 @@ export function Collection() {
           <button
             className={styles.openPackBtn}
             onClick={handleOpenPack}
-            disabled={storedPacks < 1 || openPack.isPending}
+            disabled={storedPacks < 1}
           >
-            {openPack.isPending ? 'Opening…' : `Open Pack (${storedPacks})`}
+            {`Open Pack (${storedPacks})`}
           </button>
         </div>
       </div>

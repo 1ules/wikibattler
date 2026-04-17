@@ -73,12 +73,110 @@
   border-color: rgba(200,168,75,0.3);
 }
 
-/* ─── Pack Visual ─────────────────────────────────────────────────────────── */
-.packWrap {
+/* ─── Pack Scene (charging + reveal container) ────────────────────────────── */
+.packScene {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-5);
+}
+
+.packMain {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Converging charge particles — all anchored at center of pack */
+.chargeRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.chargeParticle {
+  position: absolute;
+  border-radius: 50%;
+  box-shadow: 0 0 6px 2px currentColor;
+  animation: converge var(--dur, 1.6s) var(--cdelay, 0s) ease-in infinite;
+}
+
+@keyframes converge {
+  0%   { transform: rotate(var(--angle)) translateX(var(--dist)); opacity: 0; }
+  12%  { opacity: 1; }
+  78%  { opacity: 0.8; }
+  100% { transform: rotate(var(--angle)) translateX(10px); opacity: 0; }
+}
+
+/* Ready burst — particles fly outward when charging completes */
+.readyBurstRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.readyBurstParticle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  animation: ready-burst 0.8s ease-out forwards;
+  --angle: 0deg;
+}
+.readyBurstParticle:nth-child(odd)  { background: #a855f7; width: 6px; height: 6px; }
+.readyBurstParticle:nth-child(3n)   { background: #ec4899; width: 10px; height: 10px; }
+.readyBurstParticle:nth-child(4n)   { background: #60a5fa; }
+.readyBurstParticle:nth-child(5n)   { background: var(--color-gold-light); width: 5px; height: 5px; }
+
+@keyframes ready-burst {
+  0%   { transform: rotate(var(--angle)) translateX(10px); opacity: 1; }
+  100% { transform: rotate(var(--angle)) translateX(180px); opacity: 0; }
+}
+
+/* Status text */
+.chargingText {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 16px rgba(167,139,250,0.7), 0 0 32px rgba(167,139,250,0.3);
+  animation: pulse-charging 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-charging {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%       { opacity: 1;    transform: scale(1.02); }
+}
+
+.readyText {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--color-gold);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 20px rgba(200,168,75,0.9), 0 0 40px rgba(200,168,75,0.5);
+  animation: ready-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes ready-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Pack Visual ─────────────────────────────────────────────────────────── */
+.packWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
@@ -101,8 +199,84 @@
   transition: transform 0.15s ease;
 }
 
-.packWrap:hover .pack {
+.packWrap:not(.packCharging):not(.packReadyFlash):hover .pack {
   transform: scale(1.03);
+}
+
+/* During charging — absorbing energy glow, cursor locked */
+.packCharging {
+  cursor: default;
+  pointer-events: none;
+}
+.packCharging .pack {
+  animation: charge-glow 1.4s ease-in-out infinite !important;
+}
+.packCharging .packGlow {
+  opacity: 0.9;
+  animation: spin-glow 1.2s linear infinite !important;
+}
+
+@keyframes charge-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(167,139,250,0.3),
+      0 0 40px rgba(124,106,247,0.5),
+      0 0 80px rgba(167,139,250,0.2),
+      0 8px 40px rgba(0,0,0,0.8);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(167,139,250,0.6),
+      0 0 70px rgba(124,106,247,0.9),
+      0 0 130px rgba(167,139,250,0.4),
+      0 0 180px rgba(99,102,241,0.2),
+      0 8px 40px rgba(0,0,0,0.8);
+  }
+}
+
+/* Ready flash — golden burst when charging completes */
+.packReadyFlash {
+  cursor: default;
+  pointer-events: none;
+}
+.packReadyFlash .pack {
+  animation: ready-flash-glow 0.9s ease-out forwards !important;
+}
+
+@keyframes ready-flash-glow {
+  0%   {
+    box-shadow:
+      0 0 0 1px rgba(200,168,75,0.3),
+      0 0 40px rgba(200,168,75,0.5),
+      0 8px 40px rgba(0,0,0,0.8);
+  }
+  30%  {
+    box-shadow:
+      0 0 0 3px rgba(200,168,75,0.8),
+      0 0 80px rgba(200,168,75,1),
+      0 0 160px rgba(200,168,75,0.6),
+      0 0 240px rgba(251,191,36,0.3),
+      0 8px 40px rgba(0,0,0,0.8);
+    border-color: rgba(200,168,75,0.9);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(200,168,75,0.5),
+      0 0 50px rgba(200,168,75,0.6),
+      0 8px 40px rgba(0,0,0,0.8);
+  }
+}
+
+/* Charging icon pulse */
+.packIconCharge {
+  animation: charge-icon 0.8s ease-in-out infinite !important;
+  color: #a78bfa !important;
+  text-shadow: 0 0 20px rgba(167,139,250,0.9) !important;
+}
+
+@keyframes charge-icon {
+  0%, 100% { transform: scale(1);    opacity: 0.7; }
+  50%       { transform: scale(1.3); opacity: 1; }
 }
 
 /* Rotating conic border glow */
