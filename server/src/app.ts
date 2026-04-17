@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
+import { prisma } from './config/database.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { authRouter } from './modules/auth/auth.router.js';
@@ -24,7 +25,15 @@ export function createApp(): Express {
   app.use(cookieParser());
   app.use(apiLimiter);
 
-  app.get('/health', (_req, res) => res.json({ ok: true }));
+  app.get('/health', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ ok: true, db: 'connected' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.split('\n')[0] : String(err);
+      res.status(503).json({ ok: false, db: 'unreachable', error: msg });
+    }
+  });
 
   app.use('/api/auth',        authRouter);
   app.use('/api/cards',       cardsRouter);

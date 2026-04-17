@@ -26,10 +26,11 @@ export function errorHandler(
     return;
   }
 
+  const message = err instanceof Error ? err.message.split('\n')[0] : 'An unexpected error occurred.';
   console.error('[Unhandled error]', err);
   res.status(500).json({
     error: 'InternalServerError',
-    message: 'An unexpected error occurred.',
+    message,
     statusCode: 500,
   });
 }
