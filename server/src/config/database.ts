@@ -5,10 +5,15 @@ import { env } from './env.js';
 // named prepared statements. Adding ?pgbouncer=true switches Prisma to simple
 // query protocol, compatible with pgbouncer transaction mode.
 function buildDatabaseUrl(url: string): string {
-  if (url.includes('-pooler.') && !url.includes('pgbouncer=true')) {
-    return url.includes('?') ? `${url}&pgbouncer=true` : `${url}?pgbouncer=true`;
+  const isPooler = url.includes('-pooler.');
+  let result = url;
+  if (isPooler && !result.includes('pgbouncer=true')) {
+    result = result.includes('?') ? `${result}&pgbouncer=true` : `${result}?pgbouncer=true`;
   }
-  return url;
+  if (!result.includes('connect_timeout=')) {
+    result = `${result}&connect_timeout=30`;
+  }
+  return result;
 }
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
