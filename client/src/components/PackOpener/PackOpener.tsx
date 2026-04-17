@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { UserCard } from '@wikibattler/shared';
 import { Card } from '../Card/Card.js';
 import styles from './PackOpener.module.css';
@@ -6,6 +6,7 @@ import styles from './PackOpener.module.css';
 type Phase = 'charging' | 'ready-fanfare' | 'sealed' | 'shaking' | 'bursting' | 'revealing' | 'done';
 
 const FLASH_RARITIES = new Set(['SR', 'SSR', 'UR', 'MR']);
+const RARITY_ORDER = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'];
 const FLASH_COLORS: Record<string, string> = {
   SR:  'rgba(251,146,60,0.22)',
   SSR: 'rgba(248,113,113,0.28)',
@@ -39,11 +40,13 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   const [flashColor, setFlashColor] = useState<string | null>(null);
   const [floatParticles, setFloatParticles] = useState<FloatParticle[]>([]);
   const [showReadyBurst, setShowReadyBurst] = useState(false);
+  const [peakRarity, setPeakRarity] = useState<string | null>(null);
   const particleId = useRef(0);
   // Separate timers: phaseTimer is cleaned up on phase change; chargeTimer is not
-  const phaseTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const chargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const revealTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const phaseTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chargeTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ambientRef       = useRef<ReturnType<typeof setInterval> | null>(null);
+  const revealTimersRef  = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cardsRef = useRef(cards);
 
   useEffect(() => { cardsRef.current = cards; }, [cards]);
@@ -53,8 +56,38 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
       revealTimersRef.current.forEach(clearTimeout);
       if (phaseTimerRef.current)  clearTimeout(phaseTimerRef.current);
       if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
+      if (ambientRef.current)     clearInterval(ambientRef.current);
     };
   }, []);
+
+  const spawnFloatParticles = useCallback((rarity: string) => {
+    const count = PARTICLE_COUNTS[rarity] ?? 0;
+    if (count === 0) return;
+    const colors = {
+      SSR: ['#f87171', '#fb923c', '#fbbf24'],
+      UR:  ['#fbbf24', '#f0c860', '#fde68a'],
+      MR:  ['#c084fc', '#ec4899', '#6366f1', '#a855f7'],
+    }[rarity] ?? ['#fff'];
+    const newParticles: FloatParticle[] = Array.from({ length: count }, () => ({
+      id: ++particleId.current,
+      dx: (Math.random() - 0.5) * 80,
+      color: colors[Math.floor(Math.random() * colors.length)] ?? '#fff',
+      size: 4 + Math.random() * 6,
+    }));
+    setFloatParticles(p => [...p, ...newParticles]);
+    setTimeout(() => {
+      setFloatParticles(p => p.filter(x => !newParticles.some(n => n.id === x.id)));
+    }, 1200);
+  }, []);
+
+  // Loop ambient particles while SR+ cards are visible
+  useEffect(() => {
+    const showCards = phase === 'revealing' || phase === 'done';
+    if (showCards && peakRarity && FLASH_RARITIES.has(peakRarity)) {
+      ambientRef.current = setInterval(() => spawnFloatParticles(peakRarity), 1400);
+    }
+    return () => { if (ambientRef.current) { clearInterval(ambientRef.current); ambientRef.current = null; } };
+  }, [phase, peakRarity, spawnFloatParticles]);
 
   // When parent signals charging is done → play ready fanfare then unlock
   useEffect(() => {
@@ -82,26 +115,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     return () => { if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function spawnFloatParticles(rarity: string) {
-    const count = PARTICLE_COUNTS[rarity] ?? 0;
-    if (count === 0) return;
-    const colors = {
-      SSR: ['#f87171', '#fb923c', '#fbbf24'],
-      UR:  ['#fbbf24', '#f0c860', '#fde68a'],
-      MR:  ['#c084fc', '#ec4899', '#6366f1', '#a855f7'],
-    }[rarity] ?? ['#fff'];
-    const newParticles: FloatParticle[] = Array.from({ length: count }, () => ({
-      id: ++particleId.current,
-      dx: (Math.random() - 0.5) * 80,
-      color: colors[Math.floor(Math.random() * colors.length)] ?? '#fff',
-      size: 4 + Math.random() * 6,
-    }));
-    setFloatParticles(p => [...p, ...newParticles]);
-    setTimeout(() => {
-      setFloatParticles(p => p.filter(x => !newParticles.some(n => n.id === x.id)));
-    }, 1200);
-  }
-
   function triggerFlash(rarity: string) {
     const color = FLASH_COLORS[rarity];
     if (!color) return;
@@ -123,6 +136,10 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
         if (FLASH_RARITIES.has(rarity)) {
           triggerFlash(rarity);
           spawnFloatParticles(rarity);
+          setPeakRarity(prev => {
+            const prevIdx = RARITY_ORDER.indexOf(prev ?? '');
+            return RARITY_ORDER.indexOf(rarity) > prevIdx ? rarity : prev;
+          });
         }
         if (i === current.length - 1) {
           const t = setTimeout(() => setPhase('done'), 400);
@@ -142,6 +159,12 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     setShowReadyBurst(false);
     setPhase('done');
     setRevealed(cardsRef.current.map(() => true));
+    // Compute peak from all cards so the ambient still shows after skip
+    const peak = cardsRef.current.reduce<string | null>((best, uc) => {
+      const idx = RARITY_ORDER.indexOf(uc.card.rarity);
+      return idx > RARITY_ORDER.indexOf(best ?? '') ? uc.card.rarity : best;
+    }, null);
+    if (peak && FLASH_RARITIES.has(peak)) setPeakRarity(peak);
   }
 
   function handlePackClick() {
@@ -156,6 +179,14 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
 
   return (
     <div className={styles.overlay} aria-modal="true" role="dialog">
+      {/* Looping ambient glow when SR+ cards are visible */}
+      {showCards && peakRarity && FLASH_RARITIES.has(peakRarity) && (
+        <div
+          className={styles.ambientGlow}
+          style={{ background: `radial-gradient(ellipse at center, ${FLASH_COLORS[peakRarity]} 0%, transparent 65%)` }}
+        />
+      )}
+
       {flashColor && (
         <div
           className={styles.rarityFlash}

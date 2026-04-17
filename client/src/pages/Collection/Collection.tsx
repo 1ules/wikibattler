@@ -8,8 +8,20 @@ import { usePackStore } from '../../stores/packStore.js';
 import { api } from '../../lib/api.js';
 import type { UserCard } from '@wikibattler/shared';
 import type { QidNode } from '@wikibattler/shared';
-import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD } from '@wikibattler/shared';
+import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST } from '@wikibattler/shared';
 import styles from './Collection.module.css';
+
+function modalQidTags(chain: QidNode[]): QidNode[] {
+  const seen = new Set<string>();
+  return chain
+    .filter(n => !QID_BLOCKLIST.has(n.qid))
+    .sort((a, b) => a.depth - b.depth)
+    .filter(n => {
+      if (!n.label || seen.has(n.label)) return false;
+      seen.add(n.label);
+      return true;
+    });
+}
 
 export function Collection() {
   const { data: collection, isLoading } = useCollection();
@@ -207,16 +219,19 @@ export function Collection() {
               </div>
             </div>
 
-            {/* WikiData type labels */}
-            {(selectedCard.card.qidChain?.length ?? 0) > 0 && (
-              <div className={styles.modalTags}>
-                {selectedCard.card.qidChain.map((node) => (
-                  <span key={node.qid} className={styles.modalTag} title={`${node.qid} · depth ${node.depth}`}>
-                    {node.label}
-                  </span>
-                ))}
-              </div>
-            )}
+            {/* WikiData type labels — deduplicated + blocklist-filtered */}
+            {(() => {
+              const tags = modalQidTags(selectedCard.card.qidChain ?? []);
+              return tags.length > 0 ? (
+                <div className={styles.modalTags}>
+                  {tags.map(n => (
+                    <span key={n.qid} className={styles.modalTag} title={`${n.qid} · depth ${n.depth}`}>
+                      {n.label}
+                    </span>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
         </div>
       )}

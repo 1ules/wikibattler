@@ -11,6 +11,20 @@
   overflow: hidden;
 }
 
+/* ─── Ambient glow — loops for SR+ while cards are shown ─────────────────── */
+.ambientGlow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  animation: ambient-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes ambient-pulse {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.55; }
+}
+
 /* ─── Rarity flash ────────────────────────────────────────────────────────── */
 .rarityFlash {
   position: absolute;
