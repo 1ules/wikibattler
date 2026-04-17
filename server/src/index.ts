@@ -6,8 +6,8 @@ import { prisma } from './config/database.js';
 async function main() {
   const app = createApp();
 
-  app.listen(env.PORT, () => {
-    console.log(`[server] Running on http://localhost:${env.PORT}`);
+  app.listen(env.PORT, '0.0.0.0', () => {
+    console.log(`[server] Running on http://0.0.0.0:${env.PORT}`);
     console.log(`[server] Environment: ${env.NODE_ENV}`);
   });
 }
