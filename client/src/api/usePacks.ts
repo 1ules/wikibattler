@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { usePackStore } from '../stores/packStore.js';
 import type { PackState, PackOpenResult, UserCard, ApiResponse } from '@wikibattler/shared';
@@ -30,7 +30,6 @@ export function usePackState() {
 // ─── Open regular pack ────────────────────────────────────────────────────────
 
 export function useOpenPack() {
-  const qc = useQueryClient();
   const setPackState = usePackStore((s) => s.setPackState);
 
   return useMutation({
@@ -40,7 +39,8 @@ export function useOpenPack() {
     },
     onSuccess: (result) => {
       setPackState(result.packState);
-      qc.invalidateQueries({ queryKey: ['cards'] });
+      // Collection is intentionally NOT invalidated here — deferred to pack close
+      // so newly opened cards (with traits) only appear after the opener is dismissed.
     },
   });
 }
@@ -53,7 +53,6 @@ interface PityOpenResult {
 }
 
 export function useOpenPityPack() {
-  const qc = useQueryClient();
   const setPackState = usePackStore((s) => s.setPackState);
 
   return useMutation({
@@ -63,7 +62,7 @@ export function useOpenPityPack() {
     },
     onSuccess: (result) => {
       setPackState(result.packState);
-      qc.invalidateQueries({ queryKey: ['cards'] });
+      // Deferred to pack close — same as regular pack
     },
   });
 }

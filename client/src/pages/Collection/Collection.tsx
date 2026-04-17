@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCollection } from '../../api/useCards.js';
 import { useOpenPack, usePackState, useOpenPityPack } from '../../api/usePacks.js';
 import { Card } from '../../components/Card/Card.js';
@@ -21,6 +22,7 @@ export function Collection() {
     pityUrProgress,
   } = usePackStore();
 
+  const queryClient  = useQueryClient();
   const openPack     = useOpenPack();
   const openPityPack = useOpenPityPack();
 
@@ -103,6 +105,8 @@ export function Collection() {
     setPackOpenerOpen(false);
     setPendingCards(null);
     setPackCharging(false);
+    // Refresh collection now that cards (with traits) are ready in the DB
+    void queryClient.invalidateQueries({ queryKey: ['cards'] });
   }
 
   async function handleOpenPityPack(tier: 'SR' | 'UR') {
