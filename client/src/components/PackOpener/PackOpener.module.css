@@ -11,6 +11,18 @@
   overflow: hidden;
 }
 
+@media (max-width: 768px) {
+  .overlay {
+    align-items: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .modal {
+    padding: var(--space-5) var(--space-3) var(--space-6);
+    min-height: min-content;
+  }
+}
+
 /* ─── Ambient fade-in wrapper ─────────────────────────────────────────────── */
 .ambientFadeIn {
   position: absolute;

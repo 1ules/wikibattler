@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import type { UserCard } from '@wikibattler/shared';
 import { RARITY_DISPLAY, QID_BLOCKLIST } from '@wikibattler/shared';
 import styles from './Card.module.css';
@@ -82,11 +82,43 @@ export function Card({
     applyTilt(e.clientX, e.clientY);
   }
 
-  function handleTouchMove(e: React.TouchEvent<HTMLElement>) {
-    if (!tilt || revealing) return;
-    const touch = e.touches[0];
-    if (touch) applyTilt(touch.clientX, touch.clientY);
-  }
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !tilt) return;
+
+    let touchStart: { x: number; y: number } | null = null;
+
+    function onTouchStart(e: TouchEvent) {
+      const t = e.touches[0];
+      if (t) touchStart = { x: t.clientX, y: t.clientY };
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (revealing) return;
+      const t = e.touches[0];
+      if (!t || !touchStart) return;
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
+      if (dx > dy) {
+        e.preventDefault();
+        applyTilt(t.clientX, t.clientY);
+      }
+    }
+
+    function onTouchEnd() {
+      touchStart = null;
+      resetTilt();
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove',  onTouchMove,  { passive: false });
+    el.addEventListener('touchend',   onTouchEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove',  onTouchMove);
+      el.removeEventListener('touchend',   onTouchEnd);
+    };
+  }, [tilt, revealing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <article
@@ -107,8 +139,6 @@ export function Card({
       onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
       onMouseMove={handleMouseMove}
       onMouseLeave={resetTilt}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={resetTilt}
     >
       {/* Glare layer */}
       <div className={styles.glare} aria-hidden="true" />

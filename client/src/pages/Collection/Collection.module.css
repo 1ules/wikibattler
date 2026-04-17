@@ -34,12 +34,28 @@
   user-select: none;
 }
 
-.ringWrapReady { cursor: pointer; }
+.ringWrapReady { cursor: pointer; animation: ring-ready-pulse 1.8s ease-in-out infinite; }
 .ringWrapReady:hover .ringCircle,
 .ringWrapReady:hover .ringCircleSm {
-  filter: brightness(1.15);
+  filter: brightness(1.2);
 }
-.ringWrapReady { animation: pulse-ring 1.8s ease-in-out infinite; }
+
+.ringWrapFull { cursor: pointer; animation: ring-full-bounce 1.3s ease-in-out infinite; }
+.ringWrapFull:hover .ringCircle { filter: brightness(1.25); }
+
+@keyframes ring-ready-pulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 5px rgba(74,222,128,0.5)); }
+  50%       { transform: scale(1.06); filter: drop-shadow(0 0 12px rgba(74,222,128,0.85)); }
+}
+
+@keyframes ring-full-bounce {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 7px rgba(74,222,128,0.7)); }
+  18%  { transform: scale(1.1);  filter: drop-shadow(0 0 18px rgba(74,222,128,1)); }
+  36%  { transform: scale(0.96); filter: drop-shadow(0 0 9px rgba(74,222,128,0.6)); }
+  52%  { transform: scale(1.05); filter: drop-shadow(0 0 14px rgba(74,222,128,0.9)); }
+  68%  { transform: scale(0.99); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 7px rgba(74,222,128,0.7)); }
+}
 
 .ringWrapSm { gap: 3px; }
 

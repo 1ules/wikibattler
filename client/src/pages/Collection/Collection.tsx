@@ -577,7 +577,7 @@ export function Collection() {
         <div className={styles.packRings}>
           {/* Pack ring */}
           <div
-            className={[styles.ringWrap, storedPacks >= 1 ? styles.ringWrapReady : ''].filter(Boolean).join(' ')}
+            className={[styles.ringWrap, storedPacks >= MAX_STORED_PACKS ? styles.ringWrapFull : storedPacks >= 1 ? styles.ringWrapReady : ''].filter(Boolean).join(' ')}
             onClick={storedPacks >= 1 ? handleOpenPack : undefined}
             role={storedPacks >= 1 ? 'button' : undefined}
             tabIndex={storedPacks >= 1 ? 0 : undefined}

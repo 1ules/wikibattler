@@ -88,6 +88,12 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   useEffect(() => { cardsRef.current = cards; }, [cards]);
 
   useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  useEffect(() => {
     return () => {
       revealTimersRef.current.forEach(clearTimeout);
       if (phaseTimerRef.current)  clearTimeout(phaseTimerRef.current);
