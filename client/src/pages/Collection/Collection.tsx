@@ -209,6 +209,7 @@ export function Collection() {
   // Drag-and-drop refs (hot path — no React re-renders during motion)
   const dragCardRef    = useRef<UserCard | null>(null);
   const floatRef       = useRef<HTMLDivElement>(null);
+  const dragInitPos    = useRef({ x: 0, y: 0 });
   const slotRefs       = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
   const editTeamIdsRef = useRef<(string | null)[]>([null, null, null, null, null]);
   const sourceSlotRef  = useRef<number | null>(null);
@@ -374,16 +375,12 @@ export function Collection() {
 
   function startDrag(uc: UserCard, e: React.PointerEvent, fromSlot: number | null = null) {
     e.preventDefault();
-    dragCardRef.current   = uc;
-    sourceSlotRef.current = fromSlot;
+    dragCardRef.current    = uc;
+    sourceSlotRef.current  = fromSlot;
     prevDragPosRef.current = { x: e.clientX, y: e.clientY };
+    dragInitPos.current    = { x: e.clientX, y: e.clientY };
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'grabbing';
-    // Prime float position before first onMove fires
-    if (floatRef.current) {
-      floatRef.current.style.left = `${e.clientX}px`;
-      floatRef.current.style.top  = `${e.clientY}px`;
-    }
     if (fromSlot !== null) {
       const next = [...editTeamIds]; next[fromSlot] = null; setEditTeamIds(next);
     }
@@ -1013,7 +1010,7 @@ export function Collection() {
             {displayTeamCards.map((uc, i) => (
               <div
                 key={i}
-                ref={el => { if (isEditing) slotRefs.current[i] = el; }}
+                ref={el => { slotRefs.current[i] = el; }}
                 className={[
                   styles.ghostSlot,
                   isEditing ? styles.ghostSlotEditable : '',
@@ -1407,6 +1404,7 @@ export function Collection() {
         <div
           ref={floatRef}
           className={[styles.dragFloat, snapSlot !== null ? styles.dragFloatSnapped : ''].filter(Boolean).join(' ')}
+          style={{ left: dragInitPos.current.x, top: dragInitPos.current.y }}
           aria-hidden="true"
         >
           {snapSlot !== null ? (
