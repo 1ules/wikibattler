@@ -243,6 +243,20 @@
 /* Ghost team */
 .ghostTeamWrap { display: flex; flex-direction: column; gap: var(--space-2); }
 
+.ghostTeamLabelRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.ghostTeamHint {
+  font-size: 0.62rem;
+  color: var(--color-accent);
+  opacity: 0.7;
+  font-style: italic;
+  animation: fade-in 0.3s ease;
+}
+
 .ghostTeamLabel {
   font-size: 0.65rem;
   font-weight: 800;
@@ -273,15 +287,40 @@
   flex-shrink: 0;
 }
 
-.ghostSlotEditable { cursor: pointer; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
-.ghostSlotEditable:hover { border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(124,58,237,0.2); }
-
-.ghostSlotActive {
-  border-color: var(--color-accent) !important;
-  box-shadow: 0 0 0 2px rgba(124,58,237,0.35) !important;
+.ghostSlotEditable {
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .ghostSlotFilled { background: rgba(255,255,255,0.06); }
+
+/* Drop target glow — applied imperatively during drag */
+.ghostSlotDropTarget {
+  border-color: rgba(124,58,237,0.6) !important;
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.3), 0 0 18px rgba(124,58,237,0.25) !important;
+  animation: slot-target-pulse 0.9s ease-in-out infinite;
+}
+
+/* Hovered drop target — pointer is directly over it */
+.ghostSlotHovered {
+  border-color: #4ade80 !important;
+  box-shadow: 0 0 0 3px rgba(74,222,128,0.45), 0 0 28px rgba(74,222,128,0.4) !important;
+  transform: scale(1.1) !important;
+  animation: none !important;
+}
+
+@keyframes slot-target-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(124,58,237,0.3), 0 0 14px rgba(124,58,237,0.2); }
+  50%       { box-shadow: 0 0 0 3px rgba(124,58,237,0.55), 0 0 26px rgba(124,58,237,0.4); }
+}
+
+.ghostSlotDragArea {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  position: relative;
+  border-radius: inherit;
+  overflow: hidden;
+}
 
 .ghostSlotImg { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .ghostSlotImgFallback {
@@ -301,12 +340,17 @@
 
 .ghostSlotRemove {
   position: absolute; top: 3px; right: 3px;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: rgba(0,0,0,0.6); color: #f87171;
-  font-size: 0.55rem; line-height: 14px; text-align: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(0,0,0,0.75); color: #f87171;
+  font-size: 0.5rem; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(248,113,113,0.3);
+  transition: background var(--transition-fast);
+  z-index: 2;
+  cursor: pointer;
 }
+.ghostSlotRemove:hover { background: rgba(220,38,38,0.5); }
 
-.ghostSlotPlus { font-size: 1.2rem; color: rgba(255,255,255,0.2); line-height: 1; }
+.ghostSlotPlus { font-size: 1.3rem; color: rgba(255,255,255,0.18); line-height: 1; }
 
 /* Card picker */
 .editCardPicker {
@@ -573,6 +617,50 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-4);
+}
+
+/* ─── Drag-and-drop ──────────────────────────────────────────────────────── */
+
+.gridDragMode { cursor: grab; }
+.gridDragMode:active { cursor: grabbing; }
+
+.gridCardWrap { position: relative; }
+
+.gridCardDraggable { cursor: grab; }
+.gridCardDraggable:active { cursor: grabbing; }
+.gridCardDraggable:hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-card);
+  border: 2px solid rgba(124,58,237,0.45);
+  pointer-events: none;
+  animation: drag-ready-border 1.6s ease-in-out infinite;
+}
+
+@keyframes drag-ready-border {
+  0%, 100% { border-color: rgba(124,58,237,0.3); box-shadow: none; }
+  50%       { border-color: rgba(124,58,237,0.65); box-shadow: 0 0 10px rgba(124,58,237,0.25); }
+}
+
+/* The floating card that follows the cursor.
+   left/top are set imperatively; tilt vars are also set imperatively. */
+.dragFloat {
+  position: fixed;
+  width: 160px;
+  pointer-events: none;
+  z-index: 999;
+  left: 0;
+  top:  0;
+  transform:
+    translate(-50%, -55%)
+    perspective(700px)
+    rotateX(var(--tilt-x, 0deg))
+    rotateY(var(--tilt-y, 0deg))
+    scale(1.1);
+  will-change: left, top, transform;
+  filter: drop-shadow(0 28px 50px rgba(0, 0, 0, 0.85));
+  transition: transform 0.07s ease-out;
 }
 
 .empty {

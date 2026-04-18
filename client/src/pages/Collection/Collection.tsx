@@ -135,6 +135,14 @@ export function Collection() {
   const traitPopoverRef = useRef<HTMLDivElement>(null);
   const traitBtnRef     = useRef<HTMLButtonElement>(null);
 
+  // Drag-and-drop refs (hot path — no React re-renders during motion)
+  const dragCardRef    = useRef<UserCard | null>(null);
+  const floatRef       = useRef<HTMLDivElement>(null);
+  const slotRefs       = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
+  const editTeamIdsRef = useRef<(string | null)[]>([null, null, null, null, null]);
+  const sourceSlotRef  = useRef<number | null>(null);
+  const prevDragPosRef = useRef({ x: 0, y: 0 });
+
   usePackState();
 
   const { userId } = useAuthStore();
@@ -170,7 +178,7 @@ export function Collection() {
   const [subtitlePickerOpen, setSubtitlePickerOpen] = useState(false);
   const [editBg, setEditBg]                   = useState('default');
   const [editTeamIds, setEditTeamIds]         = useState<(string | null)[]>([null,null,null,null,null]);
-  const [activeSlot, setActiveSlot]           = useState<number | null>(null);
+  const [dragCard, setDragCard]               = useState<UserCard | null>(null);
   const [ghostCodeCopied, setGhostCodeCopied] = useState(false);
 
   // Close trait popover on outside click
@@ -187,6 +195,104 @@ export function Collection() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [traitOpen]);
+
+  // Keep ref in sync so drag handlers (registered via addEventListener) see latest ids
+  useEffect(() => { editTeamIdsRef.current = editTeamIds; }, [editTeamIds]);
+
+  // Drag pointer move / up — registered on window so the card tracks past the element edge
+  useEffect(() => {
+    if (!isEditing) return;
+
+    function onMove(e: PointerEvent) {
+      const float = floatRef.current;
+      if (!dragCardRef.current || !float) return;
+
+      const dx = e.clientX - prevDragPosRef.current.x;
+      const dy = e.clientY - prevDragPosRef.current.y;
+      prevDragPosRef.current = { x: e.clientX, y: e.clientY };
+
+      // Tilt from velocity
+      const tiltY = Math.max(-22, Math.min(22, dx * 2.5));
+      const tiltX = Math.max(-16, Math.min(16, -dy * 1.8));
+
+      float.style.left = `${e.clientX}px`;
+      float.style.top  = `${e.clientY}px`;
+      float.style.setProperty('--tilt-x', `${tiltX}deg`);
+      float.style.setProperty('--tilt-y', `${tiltY}deg`);
+
+      // Imperatively glow/unglow slots (avoids re-render on every frame)
+      const ids = editTeamIdsRef.current;
+      const clsDrop    = styles.ghostSlotDropTarget!;
+      const clsHovered = styles.ghostSlotHovered!;
+      slotRefs.current.forEach((ref, i) => {
+        if (!ref) return;
+        if (ids[i]) {
+          ref.classList.remove(clsDrop, clsHovered);
+          return;
+        }
+        ref.classList.add(clsDrop);
+        const r = ref.getBoundingClientRect();
+        const over = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+        ref.classList.toggle(clsHovered, over);
+      });
+    }
+
+    function onUp(e: PointerEvent) {
+      // Clean up slot classes
+      const clsDrop    = styles.ghostSlotDropTarget!;
+      const clsHovered = styles.ghostSlotHovered!;
+      slotRefs.current.forEach(ref => ref?.classList.remove(clsDrop, clsHovered));
+
+      const uc = dragCardRef.current;
+      if (!uc) return;
+
+      const ids = editTeamIdsRef.current;
+      let droppedSlot: number | null = null;
+      slotRefs.current.forEach((ref, i) => {
+        if (!ref || ids[i]) return;
+        const r = ref.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) droppedSlot = i;
+      });
+
+      if (droppedSlot !== null) {
+        const next = [...ids]; next[droppedSlot] = uc.id; setEditTeamIds(next);
+      } else if (sourceSlotRef.current !== null) {
+        // Dropped outside valid target — restore to original slot
+        const next = [...ids]; next[sourceSlotRef.current] = uc.id; setEditTeamIds(next);
+      }
+
+      dragCardRef.current  = null;
+      sourceSlotRef.current = null;
+      setDragCard(null);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup',   onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup',   onUp);
+    };
+  }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startDrag(uc: UserCard, e: React.PointerEvent, fromSlot: number | null = null) {
+    e.preventDefault();
+    dragCardRef.current   = uc;
+    sourceSlotRef.current = fromSlot;
+    prevDragPosRef.current = { x: e.clientX, y: e.clientY };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+    // Prime float position before first onMove fires
+    if (floatRef.current) {
+      floatRef.current.style.left = `${e.clientX}px`;
+      floatRef.current.style.top  = `${e.clientY}px`;
+    }
+    if (fromSlot !== null) {
+      const next = [...editTeamIds]; next[fromSlot] = null; setEditTeamIds(next);
+    }
+    setDragCard(uc);
+  }
 
   const allTraits = useMemo(() => {
     if (!collection?.data) return [];
@@ -252,12 +358,6 @@ export function Collection() {
     if (!collection?.data) return editTeamIds.map(() => null);
     const byId = new Map((collection.data as UserCard[]).map(uc => [uc.id, uc]));
     return editTeamIds.map(id => (id ? (byId.get(id) ?? null) : null));
-  }, [collection?.data, editTeamIds]);
-
-  const editableCards = useMemo<UserCard[]>(() => {
-    if (!collection?.data) return [];
-    const inTeam = new Set(editTeamIds.filter(Boolean));
-    return (collection.data as UserCard[]).filter(uc => !inTeam.has(uc.id));
   }, [collection?.data, editTeamIds]);
 
   const unlockedTitleIds = useMemo(() => {
@@ -326,7 +426,6 @@ export function Collection() {
     setEditSubtitle(profileSubtitle);
     setEditBg(profileBg);
     setEditTeamIds([...ghostTeamIds]);
-    setActiveSlot(null);
     setIsEditing(true);
   }
 
@@ -343,26 +442,12 @@ export function Collection() {
     setProfileBg(editBg);
     setGhostTeamIds(editTeamIds);
     setIsEditing(false);
-    setActiveSlot(null);
   }
 
-  function cancelEditing() { setIsEditing(false); setActiveSlot(null); }
+  function cancelEditing() { setIsEditing(false); }
 
-  function handleSlotClick(idx: number) {
-    if (!isEditing) return;
-    if (editTeamIds[idx]) {
-      const next = [...editTeamIds]; next[idx] = null; setEditTeamIds(next);
-      if (activeSlot === idx) setActiveSlot(null);
-    } else {
-      setActiveSlot(prev => prev === idx ? null : idx);
-    }
-  }
-
-  function handlePickCard(uc: UserCard) {
-    if (activeSlot === null) return;
-    const next = [...editTeamIds]; next[activeSlot] = uc.id; setEditTeamIds(next);
-    const nextEmpty = next.findIndex((id, i) => i > activeSlot && !id);
-    setActiveSlot(nextEmpty === -1 ? null : nextEmpty);
+  function removeFromSlot(idx: number) {
+    const next = [...editTeamIds]; next[idx] = null; setEditTeamIds(next);
   }
 
   async function copyGhostCode() {
@@ -671,54 +756,46 @@ export function Collection() {
 
         {/* Team slots */}
         <div className={styles.ghostTeamWrap}>
-          <span className={styles.ghostTeamLabel}>Ghost Team</span>
+          <div className={styles.ghostTeamLabelRow}>
+            <span className={styles.ghostTeamLabel}>Ghost Team</span>
+            {isEditing && (
+              <span className={styles.ghostTeamHint}>drag cards from your collection below</span>
+            )}
+          </div>
           <div className={styles.ghostTeamSlots}>
             {(isEditing ? editTeamCards : ghostTeamCards).map((uc, i) => (
               <div
                 key={i}
+                ref={el => { if (isEditing) slotRefs.current[i] = el; }}
                 className={[
                   styles.ghostSlot,
                   isEditing ? styles.ghostSlotEditable : '',
-                  isEditing && activeSlot === i ? styles.ghostSlotActive : '',
                   uc ? styles.ghostSlotFilled : '',
                 ].filter(Boolean).join(' ')}
-                onClick={() => handleSlotClick(i)}
-                role={isEditing ? 'button' : undefined}
-                tabIndex={isEditing ? 0 : undefined}
               >
                 {uc ? (
                   <>
-                    {uc.card.wikiThumbUrl
-                      ? <img className={styles.ghostSlotImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} />
-                      : <div className={styles.ghostSlotImgFallback}>{uc.card.wikiTitle.slice(0, 2)}</div>}
-                    <span className={styles.ghostSlotRarity} style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}>{uc.card.rarity}</span>
-                    {isEditing && <span className={styles.ghostSlotRemove}>✕</span>}
+                    <div
+                      className={styles.ghostSlotDragArea}
+                      onPointerDown={isEditing ? e => startDrag(uc, e, i) : undefined}
+                      style={isEditing ? { cursor: 'grab' } : undefined}
+                    >
+                      {uc.card.wikiThumbUrl
+                        ? <img className={styles.ghostSlotImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} />
+                        : <div className={styles.ghostSlotImgFallback}>{uc.card.wikiTitle.slice(0, 2)}</div>}
+                      <span className={styles.ghostSlotRarity} style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}>{uc.card.rarity}</span>
+                    </div>
+                    {isEditing && (
+                      <button className={styles.ghostSlotRemove} onClick={() => removeFromSlot(i)} aria-label="Remove card">✕</button>
+                    )}
                   </>
                 ) : (
-                  <span className={styles.ghostSlotPlus}>{isEditing ? '+' : '·'}</span>
+                  <span className={styles.ghostSlotPlus}>{isEditing ? '＋' : '·'}</span>
                 )}
               </div>
             ))}
           </div>
         </div>
-
-        {/* Card picker — shown when a slot is active in edit mode */}
-        {isEditing && activeSlot !== null && (
-          <div className={styles.editCardPicker}>
-            <span className={styles.editPickerLabel}>Pick card for slot {activeSlot + 1}</span>
-            <div className={styles.editPickerGrid}>
-              {editableCards.map(uc => (
-                <button key={uc.id} className={styles.editPickerCard} onClick={() => handlePickCard(uc)} title={uc.card.wikiTitle}>
-                  {uc.card.wikiThumbUrl
-                    ? <img className={styles.editPickerImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} loading="lazy" />
-                    : <div className={styles.editPickerImgFallback}>{uc.card.wikiTitle.slice(0, 2)}</div>}
-                  <span className={styles.editPickerRarity} style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}>{uc.card.rarity}</span>
-                  <span className={styles.editPickerName}>{uc.card.wikiTitle}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Background picker */}
         {isEditing && (
@@ -966,14 +1043,31 @@ export function Collection() {
           <button className={styles.resetBtnInline} onClick={resetFilters}>Clear filters</button>
         </div>
       ) : (
-        <div className={styles.grid}>
-          {filteredCollection.map((uc) => (
-            <Card
-              key={uc.id}
-              userCard={uc}
-              onClick={() => setSelectedCard(uc)}
-            />
-          ))}
+        <div className={[styles.grid, isEditing ? styles.gridDragMode : ''].filter(Boolean).join(' ')}>
+          {filteredCollection.map((uc) => {
+            const beingDragged = dragCard?.id === uc.id;
+            return (
+              <div
+                key={uc.id}
+                className={[styles.gridCardWrap, isEditing ? styles.gridCardDraggable : ''].filter(Boolean).join(' ')}
+                onPointerDown={isEditing ? e => startDrag(uc, e, null) : undefined}
+              >
+                <Card
+                  userCard={uc}
+                  tilt={!isEditing}
+                  onClick={isEditing ? undefined : () => setSelectedCard(uc)}
+                  style={beingDragged ? { opacity: 0.25, pointerEvents: 'none' } : undefined}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Floating drag ghost */}
+      {dragCard && (
+        <div ref={floatRef} className={styles.dragFloat} aria-hidden="true">
+          <Card userCard={dragCard} tilt={false} />
         </div>
       )}
     </div>
