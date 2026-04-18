@@ -531,3 +531,84 @@ export const ACHIEVEMENTS: Achievement[] = [
     },
   },
 ];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+export function computeStats(
+  cards: Array<{ rarity: string; isFoil: boolean; tags?: string[] }>,
+  packsOpened: number,
+  pityClaimed: boolean,
+  hadMaxStoredPacks: boolean,
+): CollectionStats {
+  const byRarity: Record<string, number> = {};
+  const foilByRarity: Record<string, number> = {};
+  const traitSet = new Set<string>();
+
+  for (const c of cards) {
+    byRarity[c.rarity] = (byRarity[c.rarity] ?? 0) + 1;
+    if (c.isFoil) foilByRarity[c.rarity] = (foilByRarity[c.rarity] ?? 0) + 1;
+    c.tags?.forEach(t => traitSet.add(t));
+  }
+
+  const srPlus  = (byRarity['SR'] ?? 0) + (byRarity['SSR'] ?? 0) + (byRarity['UR'] ?? 0) + (byRarity['MR'] ?? 0);
+  const ssrPlus = (byRarity['SSR'] ?? 0) + (byRarity['UR'] ?? 0) + (byRarity['MR'] ?? 0);
+  const urPlus  = (byRarity['UR'] ?? 0) + (byRarity['MR'] ?? 0);
+  const mrCount = byRarity['MR'] ?? 0;
+  const foilTotal = Object.values(foilByRarity).reduce((a, b) => a + b, 0);
+
+  const foilSrPlus  = ['SR','SSR','UR','MR'].some(r => (foilByRarity[r] ?? 0) > 0);
+  const foilSsrPlus = ['SSR','UR','MR'].some(r => (foilByRarity[r] ?? 0) > 0);
+  const foilUrPlus  = ['UR','MR'].some(r => (foilByRarity[r] ?? 0) > 0);
+  const foilMr      = (foilByRarity['MR'] ?? 0) > 0;
+  const foilAllSrPlus = ['SR','SSR','UR','MR'].every(r => (foilByRarity[r] ?? 0) > 0);
+
+  const ALL_RARITIES = ['C','UC','R','SR','SSR','UR','MR'];
+  const hasAllRarities = ALL_RARITIES.every(r => (byRarity[r] ?? 0) > 0);
+
+  return {
+    totalCards: cards.length, byRarity, foilTotal, foilByRarity,
+    uniqueTraits: traitSet.size, srPlus, ssrPlus, urPlus, mrCount,
+    hasAllRarities, packsOpened, pityClaimed, hadMaxStoredPacks,
+    hasFoilSrPlus: foilSrPlus, hasFoilSsrPlus: foilSsrPlus,
+    hasFoilUrPlus: foilUrPlus, hasFoilMr: foilMr, hasFoilAllSrPlus: foilAllSrPlus,
+  };
+}
+
+export function checkCondition(cond: AchievementCondition, stats: CollectionStats): boolean {
+  switch (cond.type) {
+    case 'cards':         return stats.totalCards >= (cond.value ?? 0);
+    case 'srPlus':        return stats.srPlus >= (cond.value ?? 1);
+    case 'ssrPlus':       return stats.ssrPlus >= (cond.value ?? 1);
+    case 'urPlus':        return stats.urPlus >= (cond.value ?? 1);
+    case 'mr':            return stats.mrCount >= (cond.value ?? 1);
+    case 'allRarities':   return stats.hasAllRarities;
+    case 'foilTotal':     return stats.foilTotal >= (cond.value ?? 1);
+    case 'foilSrPlus':    return stats.hasFoilSrPlus;
+    case 'foilSsrPlus':   return stats.hasFoilSsrPlus;
+    case 'foilUrPlus':    return stats.hasFoilUrPlus;
+    case 'foilMr':        return stats.hasFoilMr;
+    case 'foilAllSrPlus': return stats.hasFoilAllSrPlus;
+    case 'packs':         return stats.packsOpened >= (cond.value ?? 1);
+    case 'uniqueTraits':  return stats.uniqueTraits >= (cond.value ?? 1);
+    case 'pityClaimed':   return stats.pityClaimed;
+    case 'maxStoredPacks':return stats.hadMaxStoredPacks;
+    case 'anyRarityCount':return Object.values(stats.byRarity).some(n => n >= (cond.value ?? 1));
+    default:              return false;
+  }
+}
+
+export function getProgress(ach: Achievement, stats: CollectionStats): { current: number; target: number } {
+  const c = ach.condition;
+  switch (c.type) {
+    case 'cards':         return { current: stats.totalCards,    target: c.value ?? 1 };
+    case 'srPlus':        return { current: stats.srPlus,        target: c.value ?? 1 };
+    case 'ssrPlus':       return { current: stats.ssrPlus,       target: c.value ?? 1 };
+    case 'urPlus':        return { current: stats.urPlus,        target: c.value ?? 1 };
+    case 'mr':            return { current: stats.mrCount,       target: c.value ?? 1 };
+    case 'foilTotal':     return { current: stats.foilTotal,     target: c.value ?? 1 };
+    case 'packs':         return { current: stats.packsOpened,   target: c.value ?? 1 };
+    case 'uniqueTraits':  return { current: stats.uniqueTraits,  target: c.value ?? 1 };
+    case 'anyRarityCount':return { current: Math.max(0, ...Object.values(stats.byRarity)), target: c.value ?? 1 };
+    default:              return { current: checkCondition(c, stats) ? 1 : 0, target: 1 };
+  }
+}
