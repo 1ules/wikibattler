@@ -562,6 +562,15 @@ export function Collection() {
     return s && a.reward.subtitle?.text === s.text;
   })?.reward.subtitle;
 
+  function getTitleReward(titleId: string) {
+    const t = TITLES.find(t2 => t2.id === titleId);
+    return t ? ACHIEVEMENTS.find(a => a.reward.title?.text === t.text)?.reward.title : undefined;
+  }
+  function getSubtitleReward(subtitleId: string) {
+    const s = SUBTITLES.find(s2 => s2.id === subtitleId);
+    return s ? ACHIEVEMENTS.find(a => a.reward.subtitle?.text === s.text)?.reward.subtitle : undefined;
+  }
+
   function startEditing() {
     setEditDisplayName(displayName === 'Player' ? '' : displayName);
     setEditTitle(profileTitle);
@@ -1264,6 +1273,7 @@ export function Collection() {
               {TITLES.map(t => {
                 const unlocked = unlockedTitleIds.has(t.id);
                 const selected = editTitle === t.id;
+                const reward = getTitleReward(t.id);
                 return (
                   <button
                     key={t.id}
@@ -1273,7 +1283,19 @@ export function Collection() {
                     title={unlocked ? t.text : `🔒 ${t.earn}`}
                   >
                     {!unlocked && <span className={styles.pickerLock}>🔒</span>}
-                    <span className={styles.pickerOptionText}>{t.text}</span>
+                    <span
+                      className={[
+                        styles.pickerOptionText,
+                        reward?.animated === 'rainbow' ? styles.titleRainbow : '',
+                        reward?.animated === 'shimmer' ? styles.titleShimmer : '',
+                        reward?.animated === 'pulse'   ? styles.titlePulse   : '',
+                        reward?.glow                   ? styles.titleGlow    : '',
+                      ].filter(Boolean).join(' ')}
+                      style={{
+                        color: reward?.color ?? undefined,
+                        ...(reward?.glow ? { '--title-glow': reward.glow } as React.CSSProperties : {}),
+                      }}
+                    >{t.text}</span>
                     <span className={styles.pickerOptionEarn}>{t.earn}</span>
                   </button>
                 );
@@ -1296,6 +1318,7 @@ export function Collection() {
               {SUBTITLES.map(t => {
                 const unlocked = unlockedSubtitleIds.has(t.id);
                 const selected = editSubtitle === t.id;
+                const reward = getSubtitleReward(t.id);
                 return (
                   <button
                     key={t.id}
@@ -1305,7 +1328,10 @@ export function Collection() {
                     title={unlocked ? t.text : `🔒 ${t.earn}`}
                   >
                     {!unlocked && <span className={styles.pickerLock}>🔒</span>}
-                    <span className={styles.pickerOptionText}>{t.text}</span>
+                    <span
+                      className={styles.pickerOptionText}
+                      style={{ color: reward?.color ?? undefined }}
+                    >{t.text}</span>
                     <span className={styles.pickerOptionEarn}>{t.earn}</span>
                   </button>
                 );
