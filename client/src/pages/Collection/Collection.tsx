@@ -209,6 +209,7 @@ export function Collection() {
   // Drag-and-drop refs (hot path — no React re-renders during motion)
   const dragCardRef    = useRef<UserCard | null>(null);
   const floatRef       = useRef<HTMLDivElement>(null);
+  const profileSectionRef = useRef<HTMLElement>(null);
   const dragInitPos    = useRef({ x: 0, y: 0 });
   const slotRefs       = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
   const editTeamIdsRef = useRef<(string | null)[]>([null, null, null, null, null]);
@@ -290,6 +291,15 @@ export function Collection() {
     function onMove(e: PointerEvent) {
       const float = floatRef.current;
       if (!dragCardRef.current || !float) return;
+
+      // Auto-scroll when pointer near viewport top/bottom edges
+      const SCROLL_ZONE = 130;
+      const MAX_SPEED   = 14;
+      if (e.clientY < SCROLL_ZONE) {
+        window.scrollBy(0, -Math.round(MAX_SPEED * (1 - e.clientY / SCROLL_ZONE)));
+      } else if (e.clientY > window.innerHeight - SCROLL_ZONE) {
+        window.scrollBy(0, Math.round(MAX_SPEED * ((e.clientY - (window.innerHeight - SCROLL_ZONE)) / SCROLL_ZONE)));
+      }
 
       const dx = e.clientX - prevDragPosRef.current.x;
       const dy = e.clientY - prevDragPosRef.current.y;
@@ -605,6 +615,8 @@ export function Collection() {
     setEditBg(profileBg);
     setEditTeamIds([...ghostTeamIds]);
     setIsEditing(true);
+    // Scroll to top so the ghost team slots are visible alongside the card grid
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function saveProfile() {
@@ -939,6 +951,7 @@ export function Collection() {
 
       {/* ── Profile / Ghost ── */}
       <section
+        ref={profileSectionRef}
         className={[styles.profileSection, isEditing ? styles.profileEditing : ''].filter(Boolean).join(' ')}
         data-bg={isEditing ? editBg : profileBg}
         aria-label="Player profile"
@@ -1404,6 +1417,13 @@ export function Collection() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Drag hint — shown when dragging so user knows to move up to reach slots */}
+      {dragCard && (
+        <div className={styles.dragScrollHint} aria-hidden="true">
+          ↑ Move up to place in team slot
         </div>
       )}
 
