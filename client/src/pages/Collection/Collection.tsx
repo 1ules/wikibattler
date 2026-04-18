@@ -9,7 +9,7 @@ import { useAuthStore } from '../../stores/authStore.js';
 import { api } from '../../lib/api.js';
 import type { UserCard, ApiResponse } from '@wikibattler/shared';
 import type { QidNode } from '@wikibattler/shared';
-import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS } from '@wikibattler/shared';
+import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS, evaluateTeam, calculateCP } from '@wikibattler/shared';
 import styles from './Collection.module.css';
 
 const ALL_RARITIES = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'] as const;
@@ -390,25 +390,18 @@ export function Collection() {
     const cards = displayTeamCards.filter((uc): uc is UserCard => uc !== null);
     if (cards.length === 0) return null;
 
-    const atk   = cards.reduce((s, uc) => s + uc.card.attack, 0);
-    const hp    = cards.reduce((s, uc) => s + uc.card.health, 0);
-    const spd   = cards.reduce((s, uc) => s + uc.card.speed,  0);
-    const power = atk + hp + spd;
+    const atk = cards.reduce((s, uc) => s + uc.card.attack, 0);
+    const hp  = cards.reduce((s, uc) => s + uc.card.health, 0);
+    const spd = cards.reduce((s, uc) => s + uc.card.speed,  0);
 
-    // Shared traits: count how many distinct cards carry each trait label
-    const traitCardCount = new Map<string, number>();
-    for (const uc of cards) {
-      const seen = new Set<string>();
-      for (const t of getCardTraits(uc)) {
-        if (!seen.has(t)) { seen.add(t); traitCardCount.set(t, (traitCardCount.get(t) ?? 0) + 1); }
-      }
-    }
-    const synergies = [...traitCardCount.entries()]
-      .filter(([, n]) => n >= 2)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 7);
+    // Same formula as battle: ATK + HP×0.5 + SPD×0.3
+    const power = Math.round(atk + hp * 0.5 + spd * 0.3);
 
-    return { atk, hp, spd, power, synergies, count: cards.length };
+    // Real synergy engine (same one the battle uses)
+    const synergyResult = evaluateTeam(cards.map(uc => ({ qidChain: uc.card.qidChain ?? [] })));
+    const powerWithBonuses = calculateCP(cards.map(uc => uc.card), synergyResult);
+
+    return { atk, hp, spd, power, powerWithBonuses, synergies: synergyResult.synergies, count: cards.length };
   }, [displayTeamCards]);
 
   const unlockedTitleIds = useMemo(() => {
@@ -851,42 +844,70 @@ export function Collection() {
           {/* Team stats + synergies */}
           {teamStats && (
             <div className={styles.teamStatsPanel}>
-              <div className={styles.teamStatRows}>
-                <div className={styles.teamStatRow}>
-                  <span className={[styles.teamStatDot, styles.teamStatDotAtk].join(' ')} />
-                  <span className={styles.teamStatLbl}>ATK</span>
-                  <span className={[styles.teamStatVal, styles.teamStatValAtk].join(' ')}>{teamStats.atk.toLocaleString()}</span>
+              {/* Two-line stat block */}
+              <div className={styles.teamStatsBlock}>
+                {/* Line 1: ATK · HP · SPD */}
+                <div className={styles.teamStatLine}>
+                  <span className={styles.teamStatItem}>
+                    <span className={[styles.teamStatDot, styles.teamStatDotAtk].join(' ')} />
+                    <span className={styles.teamStatLbl}>ATK</span>
+                    <span className={[styles.teamStatVal, styles.teamStatValAtk].join(' ')}>{teamStats.atk.toLocaleString()}</span>
+                  </span>
+                  <span className={styles.teamStatSep} />
+                  <span className={styles.teamStatItem}>
+                    <span className={[styles.teamStatDot, styles.teamStatDotHp].join(' ')} />
+                    <span className={styles.teamStatLbl}>HP</span>
+                    <span className={[styles.teamStatVal, styles.teamStatValHp].join(' ')}>{teamStats.hp.toLocaleString()}</span>
+                  </span>
+                  <span className={styles.teamStatSep} />
+                  <span className={styles.teamStatItem}>
+                    <span className={[styles.teamStatDot, styles.teamStatDotSpd].join(' ')} />
+                    <span className={styles.teamStatLbl}>SPD</span>
+                    <span className={[styles.teamStatVal, styles.teamStatValSpd].join(' ')}>{teamStats.spd.toLocaleString()}</span>
+                  </span>
                 </div>
-                <div className={styles.teamStatRow}>
-                  <span className={[styles.teamStatDot, styles.teamStatDotHp].join(' ')} />
-                  <span className={styles.teamStatLbl}>HP</span>
-                  <span className={[styles.teamStatVal, styles.teamStatValHp].join(' ')}>{teamStats.hp.toLocaleString()}</span>
-                </div>
-                <div className={styles.teamStatRow}>
-                  <span className={[styles.teamStatDot, styles.teamStatDotSpd].join(' ')} />
-                  <span className={styles.teamStatLbl}>SPD</span>
-                  <span className={[styles.teamStatVal, styles.teamStatValSpd].join(' ')}>{teamStats.spd.toLocaleString()}</span>
-                </div>
-                <div className={[styles.teamStatRow, styles.teamStatPowerRow].join(' ')}>
-                  <span className={[styles.teamStatDot, styles.teamStatDotPower].join(' ')} />
-                  <span className={[styles.teamStatLbl, styles.teamStatPowerLbl].join(' ')}>Power</span>
-                  <span className={[styles.teamStatVal, styles.teamStatValPower].join(' ')}>{teamStats.power.toLocaleString()}</span>
+                {/* Line 2: Power · Power+Bonuses */}
+                <div className={styles.teamStatLine}>
+                  <span className={styles.teamStatItem}>
+                    <span className={[styles.teamStatDot, styles.teamStatDotPower].join(' ')} />
+                    <span className={styles.teamStatLbl}>Power</span>
+                    <span className={[styles.teamStatVal, styles.teamStatValPower].join(' ')}>{teamStats.power.toLocaleString()}</span>
+                  </span>
+                  {teamStats.powerWithBonuses !== teamStats.power && (
+                    <>
+                      <span className={styles.teamStatSep} />
+                      <span className={styles.teamStatItem}>
+                        <span className={[styles.teamStatDot, styles.teamStatDotBonus].join(' ')} />
+                        <span className={styles.teamStatLbl}>+Bonuses</span>
+                        <span className={[styles.teamStatVal, styles.teamStatValBonus].join(' ')}>{teamStats.powerWithBonuses.toLocaleString()}</span>
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
+              {/* Synergies to the right */}
               {teamStats.synergies.length > 0 && (
                 <div className={styles.teamSynergies}>
                   <span className={styles.teamSynHeader}>Synergies</span>
                   <div className={styles.teamSynList}>
-                    {teamStats.synergies.map(([trait, count]) => (
-                      <span
-                        key={trait}
-                        className={[styles.teamSynBadge, count >= 4 ? styles.teamSynBadgeGold : count >= 3 ? styles.teamSynBadgeAlt : ''].filter(Boolean).join(' ')}
-                      >
-                        {trait}
-                        <span className={styles.teamSynCount}>×{count}</span>
-                      </span>
-                    ))}
+                    {teamStats.synergies.map(syn => {
+                      const pct = Math.round((syn.statMultiplier - 1) * 100);
+                      const tier = syn.statMultiplier >= 1.2 ? 'gold' : syn.statMultiplier >= 1.1 ? 'alt' : '';
+                      return (
+                        <span
+                          key={syn.qid}
+                          className={[
+                            styles.teamSynBadge,
+                            tier === 'gold' ? styles.teamSynBadgeGold : tier === 'alt' ? styles.teamSynBadgeAlt : '',
+                          ].filter(Boolean).join(' ')}
+                          title={`${syn.sharedCount}/${syn.teamSize} cards · +${pct}% stats`}
+                        >
+                          {syn.label}
+                          <span className={styles.teamSynCount}>+{pct}%</span>
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}

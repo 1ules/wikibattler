@@ -279,30 +279,42 @@
 }
 
 /* ─── Team stats panel ───────────────────────────────────────────────────── */
+/* ─── Team stats panel: horizontal layout ────────────────────────────────── */
 .teamStatsPanel {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 148px;
+  align-items: flex-start;
+  gap: var(--space-4);
   animation: fade-in 0.25s ease;
+  flex-wrap: wrap;
 }
 
-.teamStatRows {
+/* Two-line stat block */
+.teamStatsBlock {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  background: rgba(0,0,0,0.18);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-4);
-  gap: 7px;
+  gap: 5px;
 }
 
-.teamStatRow {
-  display: grid;
-  grid-template-columns: 7px auto 1fr;
+/* One horizontal line of stats */
+.teamStatLine {
+  display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
+}
+
+/* A single stat: dot + label + value */
+.teamStatItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Thin divider between items */
+.teamStatSep {
+  width: 1px;
+  height: 10px;
+  background: rgba(255,255,255,0.1);
+  flex-shrink: 0;
 }
 
 .teamStatDot {
@@ -315,39 +327,34 @@
 .teamStatDotHp    { background: #22c55e; box-shadow: 0 0 5px rgba(34,197,94,0.7); }
 .teamStatDotSpd   { background: #3b82f6; box-shadow: 0 0 5px rgba(59,130,246,0.7); }
 .teamStatDotPower { background: var(--color-gold-light, #fde68a); box-shadow: 0 0 6px rgba(251,191,36,0.8); }
+.teamStatDotBonus { background: #a78bfa; box-shadow: 0 0 5px rgba(167,139,250,0.7); }
 
 .teamStatLbl {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
 .teamStatVal {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 900;
-  text-align: right;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text);
 }
 .teamStatValAtk   { color: #fb923c; }
 .teamStatValHp    { color: #4ade80; }
 .teamStatValSpd   { color: #60a5fa; }
 .teamStatValPower { color: #fbbf24; }
+.teamStatValBonus { color: #c4b5fd; }
 
-.teamStatPowerRow {
-  padding-top: 6px;
-  margin-top: 2px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-}
-.teamStatPowerLbl { color: rgba(251,191,36,0.7); }
-
-/* ─── Synergies ──────────────────────────────────────────────────────────── */
+/* ─── Synergies column ───────────────────────────────────────────────────── */
 .teamSynergies {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 5px;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  padding-left: var(--space-4);
 }
 
 .teamSynHeader {
@@ -361,42 +368,42 @@
 .teamSynList {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
+  max-width: 260px;
 }
 
 .teamSynBadge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: rgba(167,139,250,0.9);
   background: rgba(124,58,237,0.1);
   border: 1px solid rgba(124,58,237,0.22);
   border-radius: 999px;
-  padding: 2px 8px 2px 7px;
+  padding: 2px 7px 2px 6px;
   white-space: nowrap;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
-/* ×3 — shift to orange */
+/* +10%+ — orange */
 .teamSynBadgeAlt {
   color: rgba(251,146,60,0.95);
   background: rgba(251,146,60,0.1);
   border-color: rgba(251,146,60,0.25);
 }
 
-/* ×4+ — gold */
+/* +20%+ — gold glow */
 .teamSynBadgeGold {
   color: #fbbf24;
   background: rgba(251,191,36,0.1);
   border-color: rgba(251,191,36,0.3);
-  box-shadow: 0 0 8px rgba(251,191,36,0.15);
+  box-shadow: 0 0 6px rgba(251,191,36,0.12);
 }
 
 .teamSynCount {
-  font-size: 0.58rem;
-  opacity: 0.75;
+  font-size: 0.56rem;
+  opacity: 0.8;
   font-variant-numeric: tabular-nums;
 }
 
