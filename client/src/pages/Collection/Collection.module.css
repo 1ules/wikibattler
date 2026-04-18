@@ -565,6 +565,14 @@
   width: 220px;
 }
 .editNameInput:focus { outline: none; border-color: var(--color-accent); }
+.editNameInput:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.nameError {
+  display: block;
+  font-size: 0.75rem;
+  color: #f87171;
+  margin-top: 2px;
+}
 
 .editTitleRow { display: flex; gap: var(--space-2); }
 

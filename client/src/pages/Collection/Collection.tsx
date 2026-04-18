@@ -237,6 +237,8 @@ export function Collection() {
   });
   const [isEditing, setIsEditing]             = useState(false);
   const [editDisplayName, setEditDisplayName] = useState('');
+  const [nameError, setNameError]             = useState('');
+  const [nameSaving, setNameSaving]           = useState(false);
   const [editTitle, setEditTitle]             = useState('wanderer');
   const [editSubtitle, setEditSubtitle]       = useState('starting-out');
   const [titlePickerOpen, setTitlePickerOpen]       = useState(false);
@@ -537,8 +539,25 @@ export function Collection() {
     setIsEditing(true);
   }
 
-  function saveProfile() {
+  async function saveProfile() {
     const name = editDisplayName.trim();
+    setNameError('');
+    if (name && name !== (me?.username ?? '')) {
+      setNameSaving(true);
+      try {
+        await api.put('/users/me/username', { username: name });
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '';
+        setNameSaving(false);
+        if (msg.toLowerCase().includes('taken') || msg.toLowerCase().includes('exist')) {
+          setNameError('That username is already taken.');
+        } else {
+          setNameError('Could not save username. Try again.');
+        }
+        return;
+      }
+      setNameSaving(false);
+    }
     localStorage.setItem('wb-display-name', name);
     localStorage.setItem('wb-title', editTitle || 'wanderer');
     localStorage.setItem('wb-subtitle', editSubtitle || 'starting-out');
@@ -866,7 +885,8 @@ export function Collection() {
           <div className={styles.profileIdentity}>
             {isEditing ? (
               <>
-                <input className={styles.editNameInput} value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)} placeholder="Display name" maxLength={20} />
+                <input className={styles.editNameInput} value={editDisplayName} onChange={e => { setEditDisplayName(e.target.value); setNameError(''); }} placeholder="Display name" maxLength={20} disabled={nameSaving} />
+                {nameError && <span className={styles.nameError}>{nameError}</span>}
                 <div className={styles.editTitleRow}>
                   <button className={styles.editTitlePicker} onClick={() => setTitlePickerOpen(true)}>
                     <span>{TITLES.find(t => t.id === editTitle)?.text ?? 'Wanderer'}</span>
