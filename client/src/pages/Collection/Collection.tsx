@@ -1,8 +1,9 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useCollection } from '../../api/useCards.js';
 import { useOpenPack, usePackState, useOpenPityPack } from '../../api/usePacks.js';
 import { Card } from '../../components/Card/Card.js';
+import { AchievementToast } from '../../components/AchievementToast/AchievementToast.js';
 import { PackOpener } from '../../components/PackOpener/PackOpener.js';
 import { usePackStore } from '../../stores/packStore.js';
 import { useAuthStore } from '../../stores/authStore.js';
@@ -10,7 +11,7 @@ import { api } from '../../lib/api.js';
 import type { UserCard, ApiResponse } from '@wikibattler/shared';
 import type { QidNode } from '@wikibattler/shared';
 import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS, evaluateTeam, calculateCP, RARITY_DISPLAY } from '@wikibattler/shared';
-import { ACHIEVEMENTS, computeStats, checkCondition } from '../../utils/achievements.js';
+import { ACHIEVEMENTS, computeStats, checkCondition, type Achievement } from '../../utils/achievements.js';
 import styles from './Collection.module.css';
 
 const ALL_RARITIES = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'] as const;
@@ -518,6 +519,27 @@ export function Collection() {
   const unlockedTitleIds    = unlockedRewards.titleIds;
   const unlockedSubtitleIds = unlockedRewards.subtitleIds;
   const unlockedBgIds       = unlockedRewards.bgIds;
+
+  const [toastQueue, setToastQueue] = useState<Achievement[]>([]);
+
+  useEffect(() => {
+    const seen = new Set<string>(JSON.parse(localStorage.getItem('wb-unlocked-achievements') ?? '[]'));
+    const newlyUnlocked: Achievement[] = [];
+    for (const ach of ACHIEVEMENTS) {
+      if (!seen.has(ach.id) && checkCondition(ach.condition, achievementStats)) {
+        newlyUnlocked.push(ach);
+        seen.add(ach.id);
+      }
+    }
+    if (newlyUnlocked.length > 0) {
+      localStorage.setItem('wb-unlocked-achievements', JSON.stringify([...seen]));
+      setToastQueue(prev => [...prev, ...newlyUnlocked].slice(-4));
+    }
+  }, [achievementStats]);
+
+  const dismissToast = useCallback((id: string) => {
+    setToastQueue(prev => prev.filter(a => a.id !== id));
+  }, []);
 
   function toggleRarity(rarity: string) {
     setEnabledRarities(prev => {
@@ -1401,6 +1423,8 @@ export function Collection() {
           )}
         </div>
       )}
+
+      <AchievementToast achievements={toastQueue} onDismiss={dismissToast} />
     </div>
   );
 }
