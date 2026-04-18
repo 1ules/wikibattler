@@ -10,6 +10,7 @@ import { api } from '../../lib/api.js';
 import type { UserCard, ApiResponse } from '@wikibattler/shared';
 import type { QidNode } from '@wikibattler/shared';
 import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS, evaluateTeam, calculateCP, RARITY_DISPLAY } from '@wikibattler/shared';
+import { ACHIEVEMENTS, computeStats, checkCondition } from '../../utils/achievements.js';
 import styles from './Collection.module.css';
 
 const ALL_RARITIES = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'] as const;
@@ -470,31 +471,48 @@ export function Collection() {
     return { atk, hp, spd, power, powerWithBonuses, synergies: synergyResult.synergies, count: cards.length };
   }, [displayTeamCards]);
 
-  const unlockedTitleIds = useMemo(() => {
-    const cards = (collection?.data ?? []) as UserCard[];
-    const count = cards.length;
-    const hasMR = cards.some(uc => uc.card.rarity === 'MR');
-    const traitCount = new Set(cards.flatMap(uc => (uc.card.qidChain ?? []).filter(n => !QID_BLOCKLIST.has(n.qid)).map(n => n.label))).size;
-    const allRarities = ['C','UC','R','SR','SSR','UR','MR'].every(r => cards.some(uc => uc.card.rarity === r));
-    const unlocked = new Set<string>(['wanderer']);
-    if (count >= 50)   unlocked.add('collector');
-    if (count >= 200)  unlocked.add('hoarder');
-    if (hasMR)         unlocked.add('fortunate');
-    if (traitCount >= 10) unlocked.add('scholar');
-    if (allRarities)   unlocked.add('completionist');
-    return unlocked;
+  const achievementStats = useMemo(() => {
+    const cards = ((collection?.data ?? []) as UserCard[]).map(uc => ({
+      rarity: uc.card.rarity,
+      isFoil: uc.isFoil,
+      tags: (uc.card.qidChain ?? []).filter(n => !QID_BLOCKLIST.has(n.qid)).flatMap(n => n.label ? [n.label] : []),
+    }));
+    const packsOpened = parseInt(localStorage.getItem('wb-packs-opened') ?? '0', 10);
+    const pityClaimed = localStorage.getItem('wb-pity-claimed') === '1';
+    const hadMaxStoredPacks = localStorage.getItem('wb-had-max-packs') === '1';
+    return computeStats(cards, packsOpened, pityClaimed, hadMaxStoredPacks);
   }, [collection?.data]);
 
-  const unlockedSubtitleIds = useMemo(() => {
-    const cards = (collection?.data ?? []) as UserCard[];
-    const count = cards.length;
-    const hasUR = cards.some(uc => uc.card.rarity === 'UR' || uc.card.rarity === 'MR');
-    const unlocked = new Set<string>(['starting-out']);
-    if (count >= 20)  unlocked.add('building');
-    if (count >= 100) unlocked.add('encyclopedic');
-    if (hasUR)        unlocked.add('rarities');
-    return unlocked;
-  }, [collection?.data]);
+  const unlockedRewards = useMemo(() => {
+    const titles    = new Set<string>(['wanderer']);
+    const subtitles = new Set<string>(['starting-out']);
+    const bgs       = new Set<string>(['default', 'ocean', 'ember', 'forest', 'cosmic']);
+    for (const ach of ACHIEVEMENTS) {
+      if (!checkCondition(ach.condition, achievementStats)) continue;
+      if (ach.reward.title)      titles.add(ach.reward.title.text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+      if (ach.reward.subtitle)   subtitles.add(ach.reward.subtitle.text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+      if (ach.reward.background) bgs.add(ach.reward.background.id);
+    }
+    // match by title id directly
+    const titleIds    = new Set<string>(['wanderer']);
+    const subtitleIds = new Set<string>(['starting-out']);
+    for (const ach of ACHIEVEMENTS) {
+      if (!checkCondition(ach.condition, achievementStats)) continue;
+      if (ach.reward.title) {
+        const match = TITLES.find(t => t.text === ach.reward.title!.text);
+        if (match) titleIds.add(match.id);
+      }
+      if (ach.reward.subtitle) {
+        const match = SUBTITLES.find(t => t.text === ach.reward.subtitle!.text);
+        if (match) subtitleIds.add(match.id);
+      }
+    }
+    return { titleIds, subtitleIds, bgIds: bgs };
+  }, [achievementStats]);
+
+  const unlockedTitleIds    = unlockedRewards.titleIds;
+  const unlockedSubtitleIds = unlockedRewards.subtitleIds;
+  const unlockedBgIds       = unlockedRewards.bgIds;
 
   function toggleRarity(rarity: string) {
     setEnabledRarities(prev => {
@@ -1037,7 +1055,7 @@ export function Collection() {
         {/* Background picker */}
         {isEditing && (
           <div className={styles.editBgPicker}>
-            {BG_PRESETS.map(p => (
+            {BG_PRESETS.filter(p => unlockedBgIds.has(p.id)).map(p => (
               <button key={p.id} className={[styles.editBgSwatch, editBg === p.id ? styles.editBgSwatchActive : ''].filter(Boolean).join(' ')} style={{ background: p.gradient }} onClick={() => setEditBg(p.id)} title={p.label} aria-label={p.label} />
             ))}
           </div>
