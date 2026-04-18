@@ -21,11 +21,35 @@ type SortDir   = 'desc' | 'asc';
 interface MeData { id: string; isGuest: boolean; username: string | null; coins: number; rating: number; }
 
 const BG_PRESETS = [
-  { id: 'default', label: 'Default', gradient: 'linear-gradient(135deg,#1e1535 0%,#0f0c1a 100%)' },
-  { id: 'ocean',   label: 'Ocean',   gradient: 'linear-gradient(135deg,#0a1a2e 0%,#071520 100%)' },
-  { id: 'ember',   label: 'Ember',   gradient: 'linear-gradient(135deg,#2a0f0c 0%,#1a0805 100%)' },
-  { id: 'forest',  label: 'Forest',  gradient: 'linear-gradient(135deg,#0a2118 0%,#051a0a 100%)' },
-  { id: 'cosmic',  label: 'Cosmic',  gradient: 'linear-gradient(135deg,#1a0a2e 0%,#0f0518 100%)' },
+  { id: 'default',          label: 'Default',            gradient: 'linear-gradient(135deg,#1e1535 0%,#0f0c1a 100%)' },
+  { id: 'ocean',            label: 'Ocean',              gradient: 'linear-gradient(135deg,#0a1a2e 0%,#071520 100%)' },
+  { id: 'ember',            label: 'Ember',              gradient: 'linear-gradient(135deg,#2a0f0c 0%,#1a0805 100%)' },
+  { id: 'forest',           label: 'Forest',             gradient: 'linear-gradient(135deg,#0a2118 0%,#051a0a 100%)' },
+  { id: 'cosmic',           label: 'Cosmic',             gradient: 'linear-gradient(135deg,#1a0a2e 0%,#0f0518 100%)' },
+  // Achievement-earned backgrounds
+  { id: 'amber-shelf',      label: 'Amber Shelf',        gradient: 'linear-gradient(135deg,#2a1a00 0%,#1a0f00 100%)' },
+  { id: 'grand-archive',    label: 'Grand Archive',      gradient: 'linear-gradient(135deg,#2a1500 0%,#1a0c00 100%)' },
+  { id: 'midnight-library', label: 'Midnight Library',   gradient: 'linear-gradient(135deg,#0d0a2e 0%,#050318 100%)' },
+  { id: 'cosmos-scroll',    label: 'Cosmos Scroll',      gradient: 'linear-gradient(135deg,#000820 0%,#000510 100%)' },
+  { id: 'golden-vault',     label: 'Golden Vault',       gradient: 'linear-gradient(135deg,#1a1200 0%,#0f0900 100%)' },
+  { id: 'purple-nebula',    label: 'Purple Nebula',      gradient: 'linear-gradient(135deg,#1a0a2e 0%,#0a0518 100%)' },
+  { id: 'crimson-glow',     label: 'Crimson Glow',       gradient: 'linear-gradient(135deg,#2a0a0a 0%,#1a0505 100%)' },
+  { id: 'gilded-throne',    label: 'Gilded Throne',      gradient: 'linear-gradient(135deg,#1f1500 0%,#110c00 100%)' },
+  { id: 'void-crystal',     label: 'Void Crystal',       gradient: 'linear-gradient(135deg,#0a0018 0%,#05000f 100%)' },
+  { id: 'spectrum-waves',   label: 'Spectrum Waves',     gradient: 'linear-gradient(135deg,#1a0a2e 0%,#001a1a 100%)' },
+  { id: 'mirror-gallery',   label: 'Mirror Gallery',     gradient: 'linear-gradient(135deg,#0a1a2e 0%,#050f1a 100%)' },
+  { id: 'scarlet-foil',     label: 'Scarlet Foil',       gradient: 'linear-gradient(135deg,#2e0a0a 0%,#1a0505 100%)' },
+  { id: 'auric-light',      label: 'Auric Light',        gradient: 'linear-gradient(135deg,#2e2000 0%,#1a1200 100%)' },
+  { id: 'prismatic-myth',   label: 'Prismatic Myth',     gradient: 'linear-gradient(135deg,#1a002e 0%,#0f001a 100%)' },
+  { id: 'golden-prism',     label: 'Golden Prism',       gradient: 'linear-gradient(135deg,#1a1000 0%,#2e2000 100%)' },
+  { id: 'renaissance-map',  label: 'Renaissance Map',    gradient: 'linear-gradient(135deg,#1a1200 0%,#0f0900 100%)' },
+  { id: 'world-atlas',      label: 'World Atlas',        gradient: 'linear-gradient(135deg,#001a2e 0%,#000f1a 100%)' },
+  { id: 'starfield-map',    label: 'Starfield Map',      gradient: 'linear-gradient(135deg,#000820 0%,#000510 100%)' },
+  { id: 'pack-storm',       label: 'Pack Storm',         gradient: 'linear-gradient(135deg,#001a0a 0%,#000f05 100%)' },
+  { id: 'blizzard-cards',   label: 'Blizzard of Cards',  gradient: 'linear-gradient(135deg,#000a1a 0%,#00050f 100%)' },
+  { id: 'abyss-throne',     label: 'Abyss Throne',       gradient: 'linear-gradient(135deg,#0a001a 0%,#05000f 100%)' },
+  { id: 'hall-of-mirrors',  label: 'Hall of Mirrors',    gradient: 'linear-gradient(135deg,#00101a 0%,#000a10 100%)' },
+  { id: 'pack-singularity', label: 'Pack Singularity',   gradient: 'linear-gradient(135deg,#1a0000 0%,#0f0000 100%)' },
 ] as const;
 
 const RANK_TIERS: readonly { min: number; label: string }[] = [
@@ -49,31 +73,66 @@ function getGhostCode(userId: string): string {
 interface TitleDef { id: string; text: string; earn: string; }
 
 const TITLES: TitleDef[] = [
-  { id: 'wanderer',      text: 'Wanderer',           earn: 'Default — always available' },
-  { id: 'collector',     text: 'Card Collector',      earn: 'Collect 50 cards' },
-  { id: 'hoarder',       text: 'Hoarder',             earn: 'Collect 200 cards' },
-  { id: 'fortunate',     text: 'The Fortunate',       earn: 'Pull an MR card' },
-  { id: 'champion',      text: 'Champion',            earn: 'Win 100 battles' },
-  { id: 'unstoppable',   text: 'The Unstoppable',     earn: 'Win 20 battles in a row' },
-  { id: 'raid-veteran',  text: 'Raid Veteran',        earn: 'Complete 10 raids' },
-  { id: 'merchant',      text: 'Merchant',            earn: 'Complete 10 marketplace trades' },
-  { id: 'scholar',       text: 'Scholar',             earn: 'Own cards from 10 different traits' },
-  { id: 'completionist', text: 'Completionist',       earn: 'Own a card of every rarity' },
-  { id: 'veteran',       text: 'Veteran',             earn: 'Play for 30 days' },
-  { id: 'legend',        text: 'Legend',              earn: 'Reach Diamond rank' },
+  { id: 'wanderer',        text: 'Wanderer',           earn: 'Default — always available' },
+  { id: 'curious-mind',    text: 'Curious Mind',        earn: 'Add your first card (First Article)' },
+  { id: 'collector',       text: 'Collector',           earn: 'Collect 10 cards (Growing Library)' },
+  { id: 'centurion',       text: 'Centurion',           earn: 'Collect 100 cards (The Hundred)' },
+  { id: 'bibliophile',     text: 'Bibliophile',         earn: 'Collect 250 cards (Bibliophile)' },
+  { id: 'archivist',       text: 'Archivist',           earn: 'Collect 500 cards (Grand Archive)' },
+  { id: 'encyclopaedist',  text: 'Encyclopaedist',      earn: 'Collect 1000 cards (Encyclopaedia)' },
+  { id: 'omniscient',      text: 'Omniscient',          earn: 'Collect 2500 cards (Living Wikipedia)' },
+  { id: 'rising-star',     text: 'Rising Star',         earn: 'Get first SR card' },
+  { id: 'special-finder',  text: 'Special Finder',      earn: 'Get first SSR card' },
+  { id: 'gold-seeker',     text: 'Gold Seeker',         earn: 'Get first UR card' },
+  { id: 'myth-touched',    text: 'Myth Touched',        earn: 'Get first MR card' },
+  { id: 'sr-devotee',      text: 'SR Devotee',          earn: 'Collect 10 SR+ cards' },
+  { id: 'connoisseur',     text: 'Connoisseur',         earn: 'Collect 5 SSR+ cards' },
+  { id: 'ultra-collector', text: 'Ultra Collector',     earn: 'Collect 3 UR cards' },
+  { id: 'myth-keeper',     text: 'Myth Keeper',         earn: 'Collect 3 MR cards' },
+  { id: 'myth-hoarder',    text: 'Myth Hoarder',        earn: 'Collect 5 MR cards' },
+  { id: 'spectrum-master', text: 'Spectrum Master',     earn: 'Own a card of every rarity' },
+  { id: 'dedicated',       text: 'Dedicated',           earn: 'Collect 100 of any single rarity' },
+  { id: 'pack-addict',     text: 'Pack Addict',         earn: 'Open 10 packs' },
+  { id: 'devoted-opener',  text: 'Devoted Opener',      earn: 'Open 50 packs' },
+  { id: 'century-opener',  text: 'Century Opener',      earn: 'Open 100 packs' },
+  { id: 'avalanche',       text: 'Avalanche',           earn: 'Open 500 packs' },
+  { id: 'no-life',         text: 'No Life',             earn: 'Open 1000 packs' },
+  { id: 'shiny-hunter',    text: 'Shiny Hunter',        earn: 'Get first foil card' },
+  { id: 'foil-collector',  text: 'Foil Collector',      earn: 'Collect 5 foil cards' },
+  { id: 'mirror-keeper',   text: 'Mirror Keeper',       earn: 'Collect 20 foil cards' },
+  { id: 'gilded',          text: 'Gilded',              earn: 'Get a foil SR+ card' },
+  { id: 'scarlet-gleam',   text: 'Scarlet Gleam',       earn: 'Get a foil SSR+ card' },
+  { id: 'auric',           text: 'Auric',               earn: 'Get a foil UR card' },
+  { id: 'prismatic',       text: 'Prismatic',           earn: 'Get a foil MR card' },
+  { id: 'all-that-glitters', text: 'All That Glitters', earn: 'Foil card of every SR+ rarity' },
+  { id: 'mirror-lord',     text: 'Mirror Lord',         earn: 'Collect 50 foil cards' },
+  { id: 'explorer',        text: 'Explorer',            earn: 'Collect 5 different topic tags' },
+  { id: 'polymath',        text: 'Polymath',            earn: 'Collect 30 different topic tags' },
+  { id: 'universal-scholar', text: 'Universal Scholar', earn: 'Collect 50 different topic tags' },
+  { id: 'fortunes-favoured', text: "Fortune's Favoured", earn: 'Claim a pity card' },
 ];
 
 const SUBTITLES: TitleDef[] = [
-  { id: 'starting-out',  text: 'Just starting out',       earn: 'Default — always available' },
-  { id: 'building',      text: 'Building my collection',  earn: 'Collect 20 cards' },
-  { id: 'wiki-warrior',  text: 'Wiki warrior',            earn: 'Win 10 battles' },
-  { id: 'ghost',         text: 'Ghost of battles past',   earn: 'Complete 5 ghost battles' },
-  { id: 'searching',     text: 'Searching for knowledge', earn: 'Open 20 packs' },
-  { id: 'encyclopedic',  text: 'The encyclopedic',        earn: 'Collect 100 cards' },
-  { id: 'rarities',      text: 'Master of rarities',      earn: 'Own a UR or MR card' },
-  { id: 'feared',        text: 'Feared by all',           earn: 'Reach Gold rank' },
-  { id: 'trader',        text: 'Trading legends',         earn: 'Complete 5 marketplace trades' },
-  { id: 'raid-slayer',   text: 'Raid boss slayer',        earn: 'Complete a raid' },
+  { id: 'starting-out',       text: 'Just starting out',       earn: 'Default — always available' },
+  { id: 'of-50-articles',     text: 'of 50 Articles',          earn: 'Collect 50 cards' },
+  { id: 'ssr-hunter',         text: 'SSR Hunter',              earn: 'Get first SSR card' },
+  { id: 'golden-few',         text: 'The Golden Few',          earn: 'Collect 3 UR cards' },
+  { id: 'among-mythic',       text: 'Among the Mythic',        earn: 'Collect 3 MR cards' },
+  { id: 'beyond-rare',        text: 'Beyond Rare',             earn: 'Collect 5 MR cards' },
+  { id: 'master-of-knowledge', text: 'Master of Knowledge',    earn: 'Collect 1000 cards' },
+  { id: 'living-wiki',        text: 'The Living Wikipedia',    earn: 'Collect 2500 cards' },
+  { id: '500-packs-deep',     text: '500 Packs Deep',          earn: 'Open 500 packs' },
+  { id: '1000-packs-wow',     text: '1000 Packs. Wow.',        earn: 'Open 1000 packs' },
+  { id: 'patient-hoarder',    text: 'Patient Hoarder',         earn: 'Fill pack storage to max' },
+  { id: 'foil-sr-plus',       text: 'Foil SR+',                earn: 'Get a foil SR+ card' },
+  { id: 'golden-foil-bearer', text: 'Golden Foil Bearer',      earn: 'Get a foil UR card' },
+  { id: 'mythic-foil-bearer', text: 'Mythic Foil Bearer',      earn: 'Get a foil MR card' },
+  { id: 'foil-completionist', text: 'Foil Completionist',      earn: 'Foil of every SR+ rarity' },
+  { id: 'hall-of-mirrors-sub', text: 'Hall of Mirrors',        earn: 'Collect 50 foil cards' },
+  { id: 'master-of-many',     text: 'Master of Many',          earn: 'Collect 30 topic tags' },
+  { id: 'across-all-fields',  text: 'Across All Fields',       earn: 'Collect 50 topic tags' },
+  { id: 'nice',               text: 'Nice.',                   earn: 'Have exactly 69 cards' },
+  { id: 'blaze-it',           text: 'Blaze It',                earn: 'Have exactly 420 cards' },
 ];
 
 function firstSentence(text: string): string {
@@ -807,7 +866,7 @@ export function Collection() {
           <div className={styles.profileIdentity}>
             {isEditing ? (
               <>
-                <input className={styles.editNameInput} value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)} placeholder="Display name" maxLength={32} />
+                <input className={styles.editNameInput} value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)} placeholder="Display name" maxLength={20} />
                 <div className={styles.editTitleRow}>
                   <button className={styles.editTitlePicker} onClick={() => setTitlePickerOpen(true)}>
                     <span>{TITLES.find(t => t.id === editTitle)?.text ?? 'Wanderer'}</span>
