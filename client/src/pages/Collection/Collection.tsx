@@ -258,6 +258,13 @@ export function Collection() {
   const [snapSlot, setSnapSlot]               = useState<number | null>(null);
   const [ghostCodeCopied, setGhostCodeCopied] = useState(false);
 
+  // Prevent body scroll when card detail modal is open (stops background scroll during card tilt)
+  useEffect(() => {
+    if (!selectedCard) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [selectedCard]);
+
   // Set float to initial cursor position synchronously — avoids React style prop overriding imperative left/top
   useLayoutEffect(() => {
     if (dragCard && floatRef.current) {

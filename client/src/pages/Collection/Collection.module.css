@@ -1666,6 +1666,8 @@
   z-index: 100;
   padding: var(--space-4);
   animation: fade-in 0.18s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modalContent {
@@ -1959,10 +1961,20 @@
 
 /* Mobile: stack vertically */
 @media (max-width: 580px) {
+  /* Align to top so close button is always reachable */
+  .modalOverlay {
+    align-items: flex-start;
+    padding: max(var(--space-4), env(safe-area-inset-top)) var(--space-3) max(var(--space-4), env(safe-area-inset-bottom));
+  }
   .modalContent {
     grid-template-columns: 1fr;
     max-height: unset;
     overflow-y: auto;
+  }
+  .modalClose {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
   }
   .modalCardPanel {
     padding: var(--space-5) var(--space-6) var(--space-4);
@@ -1975,5 +1987,12 @@
   }
   .modalDetails {
     overflow-y: unset;
+  }
+}
+
+/* Very small phones — tighter card grid */
+@media (max-width: 420px) {
+  .grid, .loadingGrid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   }
 }
