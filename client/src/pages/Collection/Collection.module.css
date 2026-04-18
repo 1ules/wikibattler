@@ -507,11 +507,49 @@
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--color-accent);
+  transition: color 0.3s;
 }
 
 .profileSubtitle {
   font-size: 0.72rem;
   color: var(--color-text-muted);
+  transition: color 0.3s;
+}
+
+/* ── Title effect classes ────────────────────────────────────────────────── */
+@keyframes title-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes title-rainbow {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+@keyframes title-pulse {
+  0%,100% { opacity: 1;    text-shadow: 0 0 6px var(--title-glow, currentColor); }
+  50%     { opacity: 0.8;  text-shadow: 0 0 18px var(--title-glow, currentColor), 0 0 40px var(--title-glow, currentColor); }
+}
+
+.titleGlow {
+  text-shadow: 0 0 10px var(--title-glow, currentColor), 0 0 24px var(--title-glow, currentColor);
+}
+
+.titleShimmer {
+  background: linear-gradient(90deg, currentColor 20%, #fff 50%, currentColor 80%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: title-shimmer 2.5s linear infinite;
+}
+
+.titleRainbow {
+  animation: title-rainbow 4s linear infinite;
+  font-weight: 900;
+}
+
+.titlePulse {
+  animation: title-pulse 2s ease-in-out infinite;
 }
 
 .ghostCodeBlock { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }

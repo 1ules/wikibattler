@@ -553,6 +553,15 @@ export function Collection() {
   const currentBg   = BG_PRESETS.find(p => p.id === profileBg)?.gradient ?? BG_PRESETS[0]!.gradient;
   const previewBg   = BG_PRESETS.find(p => p.id === editBg)?.gradient ?? BG_PRESETS[0]!.gradient;
 
+  const activeTitleReward = ACHIEVEMENTS.find(a => {
+    const t = TITLES.find(t2 => t2.id === profileTitle);
+    return t && a.reward.title?.text === t.text;
+  })?.reward.title;
+  const activeSubtitleReward = ACHIEVEMENTS.find(a => {
+    const s = SUBTITLES.find(s2 => s2.id === profileSubtitle);
+    return s && a.reward.subtitle?.text === s.text;
+  })?.reward.subtitle;
+
   function startEditing() {
     setEditDisplayName(displayName === 'Player' ? '' : displayName);
     setEditTitle(profileTitle);
@@ -925,8 +934,29 @@ export function Collection() {
               <>
                 <span className={styles.profileName}>{displayName}</span>
                 <div className={styles.profileTitleRow}>
-                  <span className={styles.profileTitle}>{TITLES.find(t => t.id === profileTitle)?.text ?? 'Wanderer'}</span>
-                  {profileSubtitle && <span className={styles.profileSubtitle}>· {SUBTITLES.find(t => t.id === profileSubtitle)?.text ?? ''}</span>}
+                  <span
+                    className={[
+                      styles.profileTitle,
+                      activeTitleReward?.animated === 'rainbow'  ? styles.titleRainbow  : '',
+                      activeTitleReward?.animated === 'shimmer'  ? styles.titleShimmer  : '',
+                      activeTitleReward?.animated === 'pulse'    ? styles.titlePulse    : '',
+                      activeTitleReward?.glow                    ? styles.titleGlow     : '',
+                    ].filter(Boolean).join(' ')}
+                    style={{
+                      color: activeTitleReward?.color ?? undefined,
+                      ...(activeTitleReward?.glow ? { '--title-glow': activeTitleReward.glow } as React.CSSProperties : {}),
+                    }}
+                  >
+                    {TITLES.find(t => t.id === profileTitle)?.text ?? 'Wanderer'}
+                  </span>
+                  {profileSubtitle && (
+                    <span
+                      className={styles.profileSubtitle}
+                      style={{ color: activeSubtitleReward?.color ?? undefined }}
+                    >
+                      · {SUBTITLES.find(t => t.id === profileSubtitle)?.text ?? ''}
+                    </span>
+                  )}
                 </div>
               </>
             )}
