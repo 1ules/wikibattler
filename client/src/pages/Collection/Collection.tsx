@@ -212,7 +212,6 @@ export function Collection() {
   const profileSectionRef = useRef<HTMLElement>(null);
   const dragInitPos    = useRef({ x: 0, y: 0 });
   const slotRefs       = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
-  const traySlotRefs   = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
   const editTeamIdsRef = useRef<(string | null)[]>([null, null, null, null, null]);
   const sourceSlotRef  = useRef<number | null>(null);
   const prevDragPosRef = useRef({ x: 0, y: 0 });
@@ -304,16 +303,15 @@ export function Collection() {
       const clsDrop = styles.ghostSlotDropTarget!;
       const clsHov  = styles.ghostSlotHovered!;
 
-      // Detect which tray slot (always in viewport) the pointer is over
       let overSlot: number | null = null;
-      traySlotRefs.current.forEach((ref, i) => {
+      slotRefs.current.forEach((ref, i) => {
         if (!ref || ids[i]) return;
         const r = ref.getBoundingClientRect();
         if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) overSlot = i;
       });
 
       if (overSlot !== null) {
-        const slotEl = traySlotRefs.current[overSlot];
+        const slotEl = slotRefs.current[overSlot];
         if (slotEl) {
           const r = slotEl.getBoundingClientRect();
           float.style.left = `${r.left + r.width  / 2}px`;
@@ -333,8 +331,7 @@ export function Collection() {
         setSnapSlot(overSlot);
       }
 
-      // Glow tray slots
-      traySlotRefs.current.forEach((ref, i) => {
+      slotRefs.current.forEach((ref, i) => {
         if (!ref) return;
         if (ids[i]) { ref.classList.remove(clsDrop, clsHov); return; }
         ref.classList.add(clsDrop);
@@ -345,14 +342,14 @@ export function Collection() {
     function onUp(e: PointerEvent) {
       const clsDrop = styles.ghostSlotDropTarget!;
       const clsHov  = styles.ghostSlotHovered!;
-      traySlotRefs.current.forEach(ref => ref?.classList.remove(clsDrop, clsHov));
+      slotRefs.current.forEach(ref => ref?.classList.remove(clsDrop, clsHov));
 
       const uc = dragCardRef.current;
       if (!uc) return;
 
       const ids = editTeamIdsRef.current;
       let droppedSlot: number | null = null;
-      traySlotRefs.current.forEach((ref, i) => {
+      slotRefs.current.forEach((ref, i) => {
         if (!ref || ids[i]) return;
         const r = ref.getBoundingClientRect();
         if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) droppedSlot = i;
@@ -603,8 +600,6 @@ export function Collection() {
     setEditBg(profileBg);
     setEditTeamIds([...ghostTeamIds]);
     setIsEditing(true);
-    // Scroll to top so the ghost team slots are visible alongside the card grid
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function saveProfile() {
@@ -1405,42 +1400,6 @@ export function Collection() {
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Drag tray — always-visible ghost team slots at bottom of screen during drag */}
-      {dragCard && isEditing && (
-        <div className={styles.dragTray} aria-hidden="true">
-          <span className={styles.dragTrayLabel}>Drop into slot</span>
-          <div className={styles.dragTraySlots}>
-            {editTeamIds.map((id, i) => {
-              const uc = editTeamCards[i];
-              return (
-                <div
-                  key={i}
-                  ref={el => { traySlotRefs.current[i] = el; }}
-                  className={[
-                    styles.ghostSlot,
-                    styles.ghostSlotEditable,
-                    uc ? styles.ghostSlotFilled : '',
-                  ].filter(Boolean).join(' ')}
-                >
-                  {uc ? (
-                    <div className={styles.ghostSlotDragArea}>
-                      {uc.card.wikiThumbUrl
-                        ? <img className={styles.ghostSlotImg} src={uc.card.wikiThumbUrl} alt={uc.card.wikiTitle} />
-                        : <div className={styles.ghostSlotImgFallback}>{uc.card.wikiTitle.slice(0, 2)}</div>}
-                      <span className={styles.ghostSlotRarity} style={{ color: `var(--rarity-${uc.card.rarity.toLowerCase()})` }}>
-                        {uc.card.rarity}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className={styles.ghostSlotPlus}>＋</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
 

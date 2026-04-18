@@ -446,6 +446,9 @@
 .profileEditing {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 1px rgba(124,58,237,0.25);
+  position: sticky;
+  top: 58px;
+  z-index: 50;
 }
 
 .profileEditBtn {
@@ -1207,46 +1210,6 @@
   white-space: nowrap;
 }
 
-/* ─── Drag tray — slides up from bottom when dragging a card ─────────────── */
-.dragTray {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 12px 24px 16px;
-  background: rgba(7, 5, 18, 0.95);
-  backdrop-filter: blur(14px);
-  border-top: 1px solid rgba(124,58,237,0.45);
-  box-shadow: 0 -6px 28px rgba(124,58,237,0.18);
-  pointer-events: none;
-  animation: drag-tray-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes drag-tray-in {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-.dragTrayLabel {
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(124,58,237,0.7);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.dragTraySlots {
-  display: flex;
-  gap: 8px;
-  pointer-events: none;
-}
 
 .empty {
   padding: var(--space-12);
