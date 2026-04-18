@@ -87,6 +87,21 @@
   background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
 }
 
+/* ─── Phase 2 badge ─────────────────────────────────────────────────────────── */
+.p2badge {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  margin-left: 0.25rem;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #fff;
+  vertical-align: middle;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
 /* ─── Header Right ──────────────────────────────────────────────────────────── */
 .headerRight {
   display: flex;

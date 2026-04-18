@@ -18,13 +18,21 @@ export function AppShell() {
         <span className={styles.logo}>WikiBattler</span>
 
         <nav className={styles.nav}>
-          <NavLink to="/"           className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Home</NavLink>
-          <NavLink to="/collection" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Collection</NavLink>
-          <NavLink to="/battle"     className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Battle</NavLink>
+          <NavLink to="/"            className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Home</NavLink>
+          <NavLink to="/collection"  className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Collection</NavLink>
+          <NavLink to="/achievements" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Achievements</NavLink>
+          <NavLink to="/battle"      className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>
+            Battle <span className={styles.p2badge}>P2</span>
+          </NavLink>
+          <NavLink to="/raid"        className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>
+            Raid <span className={styles.p2badge}>P2</span>
+          </NavLink>
           {!isGuest && (
             <NavLink to="/market" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Market</NavLink>
           )}
-          <NavLink to="/leaderboard" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Ranks</NavLink>
+          <NavLink to="/leaderboard" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>
+            Ranks <span className={styles.p2badge}>P2</span>
+          </NavLink>
         </nav>
 
         <div className={styles.headerRight} />
