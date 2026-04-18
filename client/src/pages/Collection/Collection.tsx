@@ -9,7 +9,7 @@ import { useAuthStore } from '../../stores/authStore.js';
 import { api } from '../../lib/api.js';
 import type { UserCard, ApiResponse } from '@wikibattler/shared';
 import type { QidNode } from '@wikibattler/shared';
-import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS, evaluateTeam, calculateCP } from '@wikibattler/shared';
+import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS, evaluateTeam, calculateCP, RARITY_DISPLAY } from '@wikibattler/shared';
 import styles from './Collection.module.css';
 
 const ALL_RARITIES = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'] as const;
@@ -75,6 +75,11 @@ const SUBTITLES: TitleDef[] = [
   { id: 'trader',        text: 'Trading legends',         earn: 'Complete 5 marketplace trades' },
   { id: 'raid-slayer',   text: 'Raid boss slayer',        earn: 'Complete a raid' },
 ];
+
+function firstSentence(text: string): string {
+  const m = text.match(/^[^.!?]*[.!?]/);
+  return m ? m[0].trim() : text.slice(0, 180).trim();
+}
 
 function modalQidTags(chain: QidNode[]): QidNode[] {
   const seen = new Set<string>();
@@ -630,75 +635,109 @@ export function Collection() {
       )}
 
       {/* ── Card detail modal ── */}
-      {selectedCard && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setSelectedCard(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <button
-              className={styles.modalClose}
-              onClick={() => setSelectedCard(null)}
-              aria-label="Close"
-            >✕</button>
+      {selectedCard && (() => {
+        const { card, isFoil } = selectedCard;
+        const rarityColor = RARITY_DISPLAY[card.rarity].color;
+        const rarityLabel = RARITY_DISPLAY[card.rarity].label;
+        const power = Math.round(card.attack + card.health * 0.5 + card.speed * 0.3);
+        const statMax = Math.max(card.attack, card.health, card.speed, 1);
+        const tags = modalQidTags(card.qidChain ?? []);
+        const desc = card.wikiExtract ? firstSentence(card.wikiExtract) : null;
+        return (
+          <div
+            className={styles.modalOverlay}
+            onClick={() => setSelectedCard(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className={styles.modalContent}
+              style={{ '--modal-rarity-color': rarityColor } as React.CSSProperties}
+              onClick={e => e.stopPropagation()}
+            >
+              <button className={styles.modalClose} onClick={() => setSelectedCard(null)} aria-label="Close">✕</button>
 
-            <h2 className={styles.modalCardName}>{selectedCard.card.wikiTitle}</h2>
-
-            <div className={styles.modalMain}>
-              <div className={styles.modalActions}>
-                <a
-                  className={styles.modalActionBtn}
-                  href={`https://en.wikipedia.org/wiki/${selectedCard.card.wikiSlug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="View on Wikipedia"
-                >
-                  <span className={styles.modalActionIcon}>🌐</span>
-                  <span>Wiki</span>
-                </a>
-                <button
-                  className={styles.modalActionBtn}
-                  onClick={() => handleShare(selectedCard.card)}
-                  title="Share card"
-                >
-                  <span className={styles.modalActionIcon}>
-                    {copiedShare ? '✓' : '↗'}
-                  </span>
-                  <span>{copiedShare ? 'Copied!' : 'Share'}</span>
-                </button>
-              </div>
-
-              <div className={styles.modalCardWrap}>
-                <Card userCard={selectedCard} tilt />
-              </div>
-
-              <div className={styles.modalExtract}>
-                <div className={styles.modalExtractScroll}>
-                  <p className={styles.modalExtractText}>
-                    {selectedCard.card.wikiExtract || 'No description available.'}
-                  </p>
+              {/* Left — large card + ambient glow */}
+              <div className={styles.modalCardPanel}>
+                <div className={styles.modalCardGlow} aria-hidden="true" />
+                <div className={styles.modalCardWrap}>
+                  <Card userCard={selectedCard} large tilt />
                 </div>
-                <div className={styles.modalExtractFade} aria-hidden="true" />
               </div>
-            </div>
 
-            {(() => {
-              const tags = modalQidTags(selectedCard.card.qidChain ?? []);
-              return tags.length > 0 ? (
-                <div className={styles.modalTags}>
-                  {tags.map(n => (
-                    <span key={n.qid} className={styles.modalTag} title={`${n.qid} · depth ${n.depth}`}>
-                      {n.label}
-                    </span>
+              {/* Right — all metadata */}
+              <div className={styles.modalDetails}>
+
+                {/* Rarity + foil badges */}
+                <div className={styles.modalBadgeRow}>
+                  <span className={styles.modalRarityBadge}>{rarityLabel}</span>
+                  {isFoil && <span className={styles.modalFoilBadge}>✦ Foil</span>}
+                </div>
+
+                {/* Card title */}
+                <h2 className={styles.modalTitle}>{card.wikiTitle}</h2>
+
+                {/* Power score */}
+                <div className={styles.modalPowerRow}>
+                  <span className={styles.modalPowerVal}>{power.toLocaleString()}</span>
+                  <span className={styles.modalPowerLabel}>Power</span>
+                </div>
+
+                {/* Stat bars */}
+                <div className={styles.modalStats}>
+                  {([
+                    { label: 'ATK', val: card.attack,  color: '#f97316', cls: styles.modalStatNumAtk },
+                    { label: 'HP',  val: card.health,  color: '#22c55e', cls: styles.modalStatNumHp  },
+                    { label: 'SPD', val: card.speed,   color: '#3b82f6', cls: styles.modalStatNumSpd },
+                  ] as const).map(({ label, val, color, cls }) => (
+                    <div key={label} className={styles.modalStatRow}>
+                      <span className={styles.modalStatLbl} style={{ color }}>{label}</span>
+                      <div className={styles.modalStatBar}>
+                        <div
+                          className={styles.modalStatBarFill}
+                          style={{ '--fill-pct': `${(val / statMax * 100).toFixed(1)}%`, background: color } as React.CSSProperties}
+                        />
+                      </div>
+                      <span className={[styles.modalStatNum, cls].join(' ')}>{val.toLocaleString()}</span>
+                    </div>
                   ))}
                 </div>
-              ) : null;
-            })()}
+
+                {/* Description — first sentence */}
+                {desc && <p className={styles.modalDesc}>{desc}</p>}
+
+                {/* Traits */}
+                {tags.length > 0 && (
+                  <div className={styles.modalTagSection}>
+                    <span className={styles.modalTagLabel}>Traits</span>
+                    <div className={styles.modalTags}>
+                      {tags.map(n => (
+                        <span key={n.qid} className={styles.modalTag}>{n.label}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className={styles.modalActions}>
+                  <a
+                    className={styles.modalActionWiki}
+                    href={`https://en.wikipedia.org/wiki/${card.wikiSlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    🌐 Wikipedia
+                  </a>
+                  <button className={styles.modalActionShare} onClick={() => handleShare(card)}>
+                    {copiedShare ? '✓ Copied!' : '↗ Share'}
+                  </button>
+                </div>
+
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Page header ── */}
       <div className={styles.pageHeader}>
