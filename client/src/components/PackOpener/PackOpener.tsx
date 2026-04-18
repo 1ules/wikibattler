@@ -77,6 +77,7 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   const [floatParticles, setFloatParticles] = useState<FloatParticle[]>([]);
   const [showReadyBurst, setShowReadyBurst] = useState(false);
   const [peakRarity, setPeakRarity]     = useState<string | null>(null);
+  const [focusedCard, setFocusedCard]   = useState<UserCard | null>(null);
   const particleId    = useRef(0);
   const phaseTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -197,24 +198,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     );
   }
 
-  function handleSkip() {
-    if (phaseTimerRef.current)  clearTimeout(phaseTimerRef.current);
-    if (chargeTimerRef.current) clearTimeout(chargeTimerRef.current);
-    if (ambientRef.current)     clearInterval(ambientRef.current);
-    if (novaTimerRef.current)   clearInterval(novaTimerRef.current);
-    revealTimersRef.current.forEach(clearTimeout);
-    revealTimersRef.current = [];
-    setFloatParticles([]);
-    setShowReadyBurst(false);
-    setPhase('done');
-    setRevealed(cardsRef.current.map(() => true));
-    const peak = cardsRef.current.reduce<string | null>((best, uc) => {
-      const idx = RARITY_ORDER.indexOf(uc.card.rarity);
-      return idx > RARITY_ORDER.indexOf(best ?? '') ? uc.card.rarity : best;
-    }, null);
-    if (peak && FLASH_RARITIES.has(peak)) setPeakRarity(peak);
-  }
-
   function handlePackClick() {
     if (phase !== 'sealed') return;
     setRevealed(cardsRef.current.map(() => false));
@@ -256,10 +239,6 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
       </div>
 
       <div className={styles.modal}>
-        {(phase === 'revealing' || phase === 'done') && (
-          <button className={styles.skipBtn} onClick={handleSkip}>Skip</button>
-        )}
-
         {showPack && (
           <div className={styles.packScene}>
             <div className={styles.packMain}>
@@ -359,9 +338,17 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
                   styles.cardSlot,
                   revealed[i] ? styles.revealed : styles.hidden,
                   revealed[i] ? styles[`slot-${uc.card.rarity}`] ?? '' : '',
+                  revealed[i] && phase === 'done' ? styles.cardSlotClickable : '',
                 ].join(' ')}
               >
-                {revealed[i] && <Card userCard={uc} revealing />}
+                {revealed[i] && (
+                  <Card
+                    userCard={uc}
+                    revealing={phase === 'revealing'}
+                    tilt={phase === 'done'}
+                    onClick={phase === 'done' ? () => setFocusedCard(uc) : undefined}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -373,6 +360,15 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
           </button>
         )}
       </div>
+
+      {focusedCard && (
+        <div className={styles.focusBackdrop} onClick={() => setFocusedCard(null)}>
+          <div className={styles.focusCard} onClick={e => e.stopPropagation()}>
+            <Card userCard={focusedCard} large tilt />
+            <button className={styles.focusClose} onClick={() => setFocusedCard(null)} aria-label="Close">✕</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
