@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useLayoutEffect, useCallback, useRef, useState } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useCollection } from '../../api/useCards.js';
 import { useOpenPack, usePackState, useOpenPityPack } from '../../api/usePacks.js';
@@ -256,6 +256,14 @@ export function Collection() {
   const [dragCard, setDragCard]               = useState<UserCard | null>(null);
   const [snapSlot, setSnapSlot]               = useState<number | null>(null);
   const [ghostCodeCopied, setGhostCodeCopied] = useState(false);
+
+  // Set float to initial cursor position synchronously — avoids React style prop overriding imperative left/top
+  useLayoutEffect(() => {
+    if (dragCard && floatRef.current) {
+      floatRef.current.style.left = `${dragInitPos.current.x}px`;
+      floatRef.current.style.top  = `${dragInitPos.current.y}px`;
+    }
+  }, [dragCard]);
 
   // Close trait popover on outside click
   useEffect(() => {
@@ -1404,7 +1412,6 @@ export function Collection() {
         <div
           ref={floatRef}
           className={[styles.dragFloat, snapSlot !== null ? styles.dragFloatSnapped : ''].filter(Boolean).join(' ')}
-          style={{ left: dragInitPos.current.x, top: dragInitPos.current.y }}
           aria-hidden="true"
         >
           {snapSlot !== null ? (
