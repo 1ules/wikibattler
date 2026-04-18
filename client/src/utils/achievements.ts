@@ -321,4 +321,213 @@ export const ACHIEVEMENTS: Achievement[] = [
       background: { id: 'blizzard-cards', label: 'Blizzard of Cards', animated: true, textured: true },
     },
   },
+  {
+    id: 'max_stored_packs',
+    name: 'Patience Rewarded',
+    description: 'Let your pack storage fill to the maximum (10 packs).',
+    category: 'packs', tier: 'bronze',
+    condition: { type: 'maxStoredPacks' },
+    reward: { subtitle: { text: 'Patient Hoarder' } },
+  },
+
+  // ── Foil ────────────────────────────────────────────────────────────────────
+  {
+    id: 'first_foil',
+    name: 'Shining Find',
+    description: 'Obtain your first foil card.',
+    category: 'foil', tier: 'bronze',
+    condition: { type: 'foilTotal', value: 1 },
+    reward: { title: { text: 'Shiny Hunter', color: '#22c55e' } },
+  },
+  {
+    id: 'foil_5',
+    name: 'Foil Collector',
+    description: 'Collect 5 foil cards.',
+    category: 'foil', tier: 'silver',
+    condition: { type: 'foilTotal', value: 5 },
+    reward: {
+      title: { text: 'Foil Collector', color: '#3b82f6', glow: '#3b82f6' },
+    },
+  },
+  {
+    id: 'foil_20',
+    name: 'Mirror Gallery',
+    description: 'Collect 20 foil cards.',
+    category: 'foil', tier: 'gold',
+    condition: { type: 'foilTotal', value: 20 },
+    reward: {
+      title: { text: 'Mirror Keeper', color: '#eab308', glow: '#eab308', animated: 'shimmer' },
+      background: { id: 'mirror-gallery', label: 'Mirror Gallery', textured: true },
+    },
+  },
+  {
+    id: 'foil_sr',
+    name: 'Gilded Rarity',
+    description: 'Obtain a foil SR or higher card.',
+    category: 'foil', tier: 'silver',
+    condition: { type: 'foilSrPlus' },
+    reward: {
+      title: { text: 'Gilded', color: '#f97316', glow: '#f97316' },
+      subtitle: { text: 'Foil SR+' },
+    },
+  },
+  {
+    id: 'foil_ssr',
+    name: 'Scarlet Gleam',
+    description: 'Obtain a foil SSR or higher card.',
+    category: 'foil', tier: 'gold',
+    condition: { type: 'foilSsrPlus' },
+    reward: {
+      title: { text: 'Scarlet Gleam', color: '#ef4444', glow: '#ef4444', animated: 'shimmer' },
+      background: { id: 'scarlet-foil', label: 'Scarlet Foil', animated: true },
+    },
+  },
+  {
+    id: 'foil_ur',
+    name: 'Auric Light',
+    description: 'Obtain a foil UR card.',
+    category: 'foil', tier: 'platinum',
+    condition: { type: 'foilUrPlus' },
+    reward: {
+      title: { text: 'Auric', color: '#eab308', glow: '#eab308', animated: 'shimmer' },
+      subtitle: { text: 'Golden Foil Bearer', color: '#eab308' },
+      background: { id: 'auric-light', label: 'Auric Light', animated: true, textured: true },
+    },
+  },
+  {
+    id: 'foil_mr',
+    name: 'Prismatic Myth',
+    description: 'Obtain a foil MR card.',
+    category: 'foil', tier: 'mythic',
+    condition: { type: 'foilMr' },
+    reward: {
+      title: { text: 'Prismatic', color: '#fff', glow: '#c084fc', animated: 'rainbow' },
+      subtitle: { text: 'Mythic Foil Bearer', color: '#c084fc' },
+      background: { id: 'prismatic-myth', label: 'Prismatic Myth', animated: true, textured: true },
+    },
+  },
+  {
+    id: 'foil_all_sr_plus',
+    name: 'All That Glitters',
+    description: 'Own a foil card of every SR+ rarity tier.',
+    category: 'foil', tier: 'mythic',
+    condition: { type: 'foilAllSrPlus' },
+    reward: {
+      title: { text: 'All That Glitters', color: '#fff', glow: '#eab308', animated: 'rainbow' },
+      subtitle: { text: 'Foil Completionist', color: '#eab308' },
+      background: { id: 'golden-prism', label: 'Golden Prism', animated: true, textured: true },
+    },
+  },
+
+  // ── Diversity ────────────────────────────────────────────────────────────────
+  {
+    id: 'traits_5',
+    name: 'Curious Explorer',
+    description: 'Collect cards with 5 different Wikipedia topic tags.',
+    category: 'diversity', tier: 'bronze',
+    condition: { type: 'uniqueTraits', value: 5 },
+    reward: { title: { text: 'Explorer', color: '#22c55e' } },
+  },
+  {
+    id: 'traits_15',
+    name: 'Renaissance Mind',
+    description: 'Collect cards with 15 different topic tags.',
+    category: 'diversity', tier: 'silver',
+    condition: { type: 'uniqueTraits', value: 15 },
+    reward: {
+      title: { text: 'Renaissance Mind', color: '#3b82f6', glow: '#3b82f6' },
+      background: { id: 'renaissance-map', label: 'Renaissance Map', textured: true },
+    },
+  },
+  {
+    id: 'traits_30',
+    name: 'Polymathic',
+    description: 'Collect cards with 30 different topic tags.',
+    category: 'diversity', tier: 'gold',
+    condition: { type: 'uniqueTraits', value: 30 },
+    reward: {
+      title: { text: 'Polymath', color: '#eab308', glow: '#eab308', animated: 'shimmer' },
+      subtitle: { text: 'Master of Many', color: '#eab308' },
+      background: { id: 'world-atlas', label: 'World Atlas', animated: true, textured: true },
+    },
+  },
+  {
+    id: 'traits_50',
+    name: 'Universal Scholar',
+    description: 'Collect cards with 50 different topic tags.',
+    category: 'diversity', tier: 'platinum',
+    condition: { type: 'uniqueTraits', value: 50 },
+    reward: {
+      title: { text: 'Universal Scholar', color: '#a855f7', glow: '#a855f7', animated: 'shimmer' },
+      subtitle: { text: 'Across All Fields', color: '#a855f7' },
+      background: { id: 'starfield-map', label: 'Starfield Map', animated: true, textured: true },
+    },
+  },
+
+  // ── Special ──────────────────────────────────────────────────────────────────
+  {
+    id: 'pity_claimed',
+    name: 'Fortune\'s Mercy',
+    description: 'Claim a pity SSR or UR from the pity system.',
+    category: 'special', tier: 'silver',
+    condition: { type: 'pityClaimed' },
+    reward: {
+      title: { text: 'Fortune\'s Favoured', color: '#f97316', glow: '#f97316' },
+    },
+  },
+  {
+    id: 'cards_exact_69',
+    name: 'Nice',
+    description: 'Have exactly 69 cards in your collection.',
+    category: 'special', tier: 'bronze',
+    condition: { type: 'cards', value: 69 },
+    reward: { subtitle: { text: 'Nice.', color: '#22c55e' } },
+  },
+  {
+    id: 'cards_exact_420',
+    name: 'Blaze It',
+    description: 'Have exactly 420 cards in your collection.',
+    category: 'special', tier: 'silver',
+    condition: { type: 'cards', value: 420 },
+    reward: {
+      title: { text: '420', color: '#22c55e', glow: '#22c55e' },
+      subtitle: { text: 'Blaze It' },
+    },
+  },
+  {
+    id: 'mr_5',
+    name: 'Myth Hoarder',
+    description: 'Collect 5 MR cards.',
+    category: 'rarity', tier: 'mythic',
+    condition: { type: 'mr', value: 5 },
+    reward: {
+      title: { text: 'Myth Hoarder', color: '#fff', glow: '#a855f7', animated: 'rainbow' },
+      subtitle: { text: 'Beyond Rare', color: '#c084fc' },
+      background: { id: 'abyss-throne', label: 'Abyss Throne', animated: true, textured: true },
+    },
+  },
+  {
+    id: 'foil_50',
+    name: 'Hall of Mirrors',
+    description: 'Collect 50 foil cards.',
+    category: 'foil', tier: 'mythic',
+    condition: { type: 'foilTotal', value: 50 },
+    reward: {
+      title: { text: 'Mirror Lord', color: '#fff', glow: '#3b82f6', animated: 'rainbow' },
+      subtitle: { text: 'Hall of Mirrors', color: '#93c5fd' },
+      background: { id: 'hall-of-mirrors', label: 'Hall of Mirrors', animated: true, textured: true },
+    },
+  },
+  {
+    id: 'packs_1000',
+    name: 'No Life',
+    description: 'Open 1000 packs. Seriously.',
+    category: 'packs', tier: 'mythic',
+    condition: { type: 'packs', value: 1000 },
+    reward: {
+      title: { text: 'No Life', color: '#fff', glow: '#ef4444', animated: 'rainbow' },
+      subtitle: { text: '1000 Packs. Wow.', color: '#fca5a5' },
+      background: { id: 'pack-singularity', label: 'Pack Singularity', animated: true, textured: true },
+    },
+  },
 ];
