@@ -1,0 +1,257 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* ── Progress summary bar ───────────────────────────────────────────────────── */
+.progressSummary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+}
+
+.progressLabel {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.progressCount {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #a855f7;
+  white-space: nowrap;
+}
+
+/* ── Filters ────────────────────────────────────────────────────────────────── */
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterBtn:hover {
+  background: rgba(255,255,255,0.08);
+  color: #f1f5f9;
+}
+
+.filterBtn.active {
+  background: rgba(168, 85, 247, 0.18);
+  border-color: #a855f7;
+  color: #c084fc;
+}
+
+/* ── Grid ───────────────────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* ── Card ───────────────────────────────────────────────────────────────────── */
+.card {
+  position: relative;
+  padding: 1.1rem 1.25rem;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.card.unlocked {
+  border-color: rgba(168, 85, 247, 0.3);
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.card.locked {
+  opacity: 0.6;
+}
+
+/* ── Tier colours ───────────────────────────────────────────────────────────── */
+.card[data-tier='bronze']   { --tier-color: #cd7f32; }
+.card[data-tier='silver']   { --tier-color: #94a3b8; }
+.card[data-tier='gold']     { --tier-color: #eab308; }
+.card[data-tier='platinum'] { --tier-color: #a855f7; }
+.card[data-tier='mythic']   { --tier-color: #fff;    }
+
+.card.unlocked { border-color: color-mix(in srgb, var(--tier-color) 40%, transparent); }
+
+/* ── Card top row ───────────────────────────────────────────────────────────── */
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cardIcon {
+  font-size: 1.75rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cardMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardTier {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--tier-color) 18%, transparent);
+  color: var(--tier-color);
+  border: 1px solid color-mix(in srgb, var(--tier-color) 30%, transparent);
+}
+
+.unlockedBadge {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ── Description ────────────────────────────────────────────────────────────── */
+.cardDesc {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Progress bar ───────────────────────────────────────────────────────────── */
+.cardProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cardProgressRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+.cardProgressTrack {
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cardProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tier-color) 60%, transparent), var(--tier-color));
+  transition: width 0.7s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+/* ── Reward preview ─────────────────────────────────────────────────────────── */
+.rewardPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+.rewardChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #94a3b8;
+}
+
+.rewardChip span { font-size: 0.75rem; }
+
+/* ── Empty state ────────────────────────────────────────────────────────────── */
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #475569;
+  padding: 3rem;
+  font-size: 0.9rem;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  .title { font-size: 1.5rem; }
+}
