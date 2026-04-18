@@ -22,35 +22,40 @@ type SortDir   = 'desc' | 'asc';
 interface MeData { id: string; isGuest: boolean; username: string | null; coins: number; rating: number; }
 
 const BG_PRESETS = [
-  { id: 'default',          label: 'Default',            gradient: 'linear-gradient(135deg,#1e1535 0%,#0f0c1a 100%)' },
-  { id: 'ocean',            label: 'Ocean',              gradient: 'linear-gradient(135deg,#0a1a2e 0%,#071520 100%)' },
-  { id: 'ember',            label: 'Ember',              gradient: 'linear-gradient(135deg,#2a0f0c 0%,#1a0805 100%)' },
-  { id: 'forest',           label: 'Forest',             gradient: 'linear-gradient(135deg,#0a2118 0%,#051a0a 100%)' },
-  { id: 'cosmic',           label: 'Cosmic',             gradient: 'linear-gradient(135deg,#1a0a2e 0%,#0f0518 100%)' },
-  // Achievement-earned backgrounds
-  { id: 'amber-shelf',      label: 'Amber Shelf',        gradient: 'linear-gradient(135deg,#2a1a00 0%,#1a0f00 100%)' },
-  { id: 'grand-archive',    label: 'Grand Archive',      gradient: 'linear-gradient(135deg,#2a1500 0%,#1a0c00 100%)' },
-  { id: 'midnight-library', label: 'Midnight Library',   gradient: 'linear-gradient(135deg,#0d0a2e 0%,#050318 100%)' },
-  { id: 'cosmos-scroll',    label: 'Cosmos Scroll',      gradient: 'linear-gradient(135deg,#000820 0%,#000510 100%)' },
-  { id: 'golden-vault',     label: 'Golden Vault',       gradient: 'linear-gradient(135deg,#1a1200 0%,#0f0900 100%)' },
-  { id: 'purple-nebula',    label: 'Purple Nebula',      gradient: 'linear-gradient(135deg,#1a0a2e 0%,#0a0518 100%)' },
-  { id: 'crimson-glow',     label: 'Crimson Glow',       gradient: 'linear-gradient(135deg,#2a0a0a 0%,#1a0505 100%)' },
-  { id: 'gilded-throne',    label: 'Gilded Throne',      gradient: 'linear-gradient(135deg,#1f1500 0%,#110c00 100%)' },
-  { id: 'void-crystal',     label: 'Void Crystal',       gradient: 'linear-gradient(135deg,#0a0018 0%,#05000f 100%)' },
-  { id: 'spectrum-waves',   label: 'Spectrum Waves',     gradient: 'linear-gradient(135deg,#1a0a2e 0%,#001a1a 100%)' },
-  { id: 'mirror-gallery',   label: 'Mirror Gallery',     gradient: 'linear-gradient(135deg,#0a1a2e 0%,#050f1a 100%)' },
-  { id: 'scarlet-foil',     label: 'Scarlet Foil',       gradient: 'linear-gradient(135deg,#2e0a0a 0%,#1a0505 100%)' },
-  { id: 'auric-light',      label: 'Auric Light',        gradient: 'linear-gradient(135deg,#2e2000 0%,#1a1200 100%)' },
-  { id: 'prismatic-myth',   label: 'Prismatic Myth',     gradient: 'linear-gradient(135deg,#1a002e 0%,#0f001a 100%)' },
-  { id: 'golden-prism',     label: 'Golden Prism',       gradient: 'linear-gradient(135deg,#1a1000 0%,#2e2000 100%)' },
-  { id: 'renaissance-map',  label: 'Renaissance Map',    gradient: 'linear-gradient(135deg,#1a1200 0%,#0f0900 100%)' },
-  { id: 'world-atlas',      label: 'World Atlas',        gradient: 'linear-gradient(135deg,#001a2e 0%,#000f1a 100%)' },
-  { id: 'starfield-map',    label: 'Starfield Map',      gradient: 'linear-gradient(135deg,#000820 0%,#000510 100%)' },
-  { id: 'pack-storm',       label: 'Pack Storm',         gradient: 'linear-gradient(135deg,#001a0a 0%,#000f05 100%)' },
-  { id: 'blizzard-cards',   label: 'Blizzard of Cards',  gradient: 'linear-gradient(135deg,#000a1a 0%,#00050f 100%)' },
-  { id: 'abyss-throne',     label: 'Abyss Throne',       gradient: 'linear-gradient(135deg,#0a001a 0%,#05000f 100%)' },
-  { id: 'hall-of-mirrors',  label: 'Hall of Mirrors',    gradient: 'linear-gradient(135deg,#00101a 0%,#000a10 100%)' },
-  { id: 'pack-singularity', label: 'Pack Singularity',   gradient: 'linear-gradient(135deg,#1a0000 0%,#0f0000 100%)' },
+  // ── Free (flat) ─────────────────────────────────────────────────────────────
+  { id: 'default',          label: 'Default',            gradient: 'linear-gradient(135deg,#1e1535,#0f0c1a)' },
+  { id: 'ocean',            label: 'Ocean',              gradient: 'linear-gradient(135deg,#0a1a2e,#071520)' },
+  { id: 'ember',            label: 'Ember',              gradient: 'linear-gradient(135deg,#2a0f0c,#1a0805)' },
+  { id: 'forest',           label: 'Forest',             gradient: 'linear-gradient(135deg,#0a2118,#051a0a)' },
+  { id: 'cosmic',           label: 'Cosmic',             gradient: 'linear-gradient(135deg,#1a0a2e,#0f0518)' },
+  // ── Bronze (richer flat) ─────────────────────────────────────────────────────
+  { id: 'amber-shelf',      label: 'Amber Shelf',        gradient: 'linear-gradient(135deg,#3d2200,#1f1000)' },
+  // ── Silver (gradients) ───────────────────────────────────────────────────────
+  { id: 'grand-archive',    label: 'Grand Archive',      gradient: 'linear-gradient(160deg,#3d2200 0%,#1a0c00 50%,#2a1500 100%)' },
+  { id: 'golden-vault',     label: 'Golden Vault',       gradient: 'linear-gradient(135deg,#2e2000 0%,#4a3400 40%,#1a1200 100%)' },
+  { id: 'crimson-glow',     label: 'Crimson Glow',       gradient: 'linear-gradient(135deg,#3d0a0a 0%,#1a0505 50%,#2e1010 100%)' },
+  { id: 'purple-nebula',    label: 'Purple Nebula',      gradient: 'linear-gradient(135deg,#2a0a3e 0%,#0a0518 60%,#1a0a2e 100%)' },
+  // ── Gold (gradient + texture) ────────────────────────────────────────────────
+  { id: 'gilded-throne',    label: 'Gilded Throne',      gradient: 'linear-gradient(160deg,#3d2e00 0%,#1f1700 40%,#4a3a00 80%,#1a1000 100%)' },
+  { id: 'scarlet-foil',     label: 'Scarlet Foil',       gradient: 'linear-gradient(135deg,#3d0a0a 0%,#1a0505 30%,#2e0808 70%,#3d1010 100%)' },
+  { id: 'mirror-gallery',   label: 'Mirror Gallery',     gradient: 'linear-gradient(160deg,#0a1e3d 0%,#050f1a 50%,#0a1a30 100%)' },
+  { id: 'renaissance-map',  label: 'Renaissance Map',    gradient: 'linear-gradient(135deg,#2a1e00 0%,#1a1200 40%,#3d2e00 80%,#0f0900 100%)' },
+  { id: 'spectrum-waves',   label: 'Spectrum Waves',     gradient: 'linear-gradient(135deg,#1a0a2e 0%,#001a1a 35%,#1a0a00 70%,#0a001a 100%)' },
+  // ── Platinum (textured) ──────────────────────────────────────────────────────
+  { id: 'midnight-library', label: 'Midnight Library',   gradient: 'linear-gradient(160deg,#0d0a2e 0%,#050318 50%,#0a0520 100%)' },
+  { id: 'void-crystal',     label: 'Void Crystal',       gradient: 'linear-gradient(135deg,#0a0018 0%,#12003a 40%,#05000f 80%,#1a0030 100%)' },
+  { id: 'auric-light',      label: 'Auric Light',        gradient: 'linear-gradient(135deg,#3d3000 0%,#1a1500 30%,#4a3c00 65%,#2e2400 100%)' },
+  { id: 'starfield-map',    label: 'Starfield Map',      gradient: 'linear-gradient(160deg,#000820 0%,#00040e 60%,#000510 100%)' },
+  { id: 'world-atlas',      label: 'World Atlas',        gradient: 'linear-gradient(135deg,#001a2e 0%,#000f1a 40%,#002030 80%,#000810 100%)' },
+  { id: 'pack-storm',       label: 'Pack Storm',         gradient: 'linear-gradient(135deg,#002a0a 0%,#000f05 50%,#001a06 100%)' },
+  // ── Mythic (animated) ────────────────────────────────────────────────────────
+  { id: 'cosmos-scroll',    label: 'Cosmos Scroll',      gradient: 'linear-gradient(135deg,#000820,#000510)' },
+  { id: 'prismatic-myth',   label: 'Prismatic Myth',     gradient: 'linear-gradient(135deg,#1a002e,#0f001a)' },
+  { id: 'golden-prism',     label: 'Golden Prism',       gradient: 'linear-gradient(135deg,#1a1000,#2e2000)' },
+  { id: 'blizzard-cards',   label: 'Blizzard of Cards',  gradient: 'linear-gradient(135deg,#000a1a,#00050f)' },
+  { id: 'abyss-throne',     label: 'Abyss Throne',       gradient: 'linear-gradient(135deg,#0a001a,#05000f)' },
+  { id: 'hall-of-mirrors',  label: 'Hall of Mirrors',    gradient: 'linear-gradient(135deg,#00101a,#000a10)' },
+  { id: 'pack-singularity', label: 'Pack Singularity',   gradient: 'linear-gradient(135deg,#1a0000,#0f0000)' },
 ] as const;
 
 const RANK_TIERS: readonly { min: number; label: string }[] = [
@@ -890,7 +895,7 @@ export function Collection() {
       {/* ── Profile / Ghost ── */}
       <section
         className={[styles.profileSection, isEditing ? styles.profileEditing : ''].filter(Boolean).join(' ')}
-        style={{ '--profile-bg': isEditing ? previewBg : currentBg } as React.CSSProperties}
+        data-bg={isEditing ? editBg : profileBg}
         aria-label="Player profile"
       >
         <button className={styles.profileEditBtn} onClick={isEditing ? saveProfile : startEditing} title={isEditing ? 'Save' : 'Edit'}>
