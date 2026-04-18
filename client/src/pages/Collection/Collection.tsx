@@ -383,6 +383,34 @@ export function Collection() {
     return editTeamIds.map(id => (id ? (byId.get(id) ?? null) : null));
   }, [collection?.data, editTeamIds]);
 
+  // Whichever team is currently displayed
+  const displayTeamCards = isEditing ? editTeamCards : ghostTeamCards;
+
+  const teamStats = useMemo(() => {
+    const cards = displayTeamCards.filter((uc): uc is UserCard => uc !== null);
+    if (cards.length === 0) return null;
+
+    const atk   = cards.reduce((s, uc) => s + uc.card.attack, 0);
+    const hp    = cards.reduce((s, uc) => s + uc.card.health, 0);
+    const spd   = cards.reduce((s, uc) => s + uc.card.speed,  0);
+    const power = atk + hp + spd;
+
+    // Shared traits: count how many distinct cards carry each trait label
+    const traitCardCount = new Map<string, number>();
+    for (const uc of cards) {
+      const seen = new Set<string>();
+      for (const t of getCardTraits(uc)) {
+        if (!seen.has(t)) { seen.add(t); traitCardCount.set(t, (traitCardCount.get(t) ?? 0) + 1); }
+      }
+    }
+    const synergies = [...traitCardCount.entries()]
+      .filter(([, n]) => n >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 7);
+
+    return { atk, hp, spd, power, synergies, count: cards.length };
+  }, [displayTeamCards]);
+
   const unlockedTitleIds = useMemo(() => {
     const cards = (collection?.data ?? []) as UserCard[];
     const count = cards.length;
@@ -785,8 +813,9 @@ export function Collection() {
               <span className={styles.ghostTeamHint}>drag cards from your collection below</span>
             )}
           </div>
+          <div className={styles.ghostTeamBody}>
           <div className={styles.ghostTeamSlots}>
-            {(isEditing ? editTeamCards : ghostTeamCards).map((uc, i) => (
+            {displayTeamCards.map((uc, i) => (
               <div
                 key={i}
                 ref={el => { if (isEditing) slotRefs.current[i] = el; }}
@@ -818,6 +847,52 @@ export function Collection() {
               </div>
             ))}
           </div>
+
+          {/* Team stats + synergies */}
+          {teamStats && (
+            <div className={styles.teamStatsPanel}>
+              <div className={styles.teamStatRows}>
+                <div className={styles.teamStatRow}>
+                  <span className={[styles.teamStatDot, styles.teamStatDotAtk].join(' ')} />
+                  <span className={styles.teamStatLbl}>ATK</span>
+                  <span className={[styles.teamStatVal, styles.teamStatValAtk].join(' ')}>{teamStats.atk.toLocaleString()}</span>
+                </div>
+                <div className={styles.teamStatRow}>
+                  <span className={[styles.teamStatDot, styles.teamStatDotHp].join(' ')} />
+                  <span className={styles.teamStatLbl}>HP</span>
+                  <span className={[styles.teamStatVal, styles.teamStatValHp].join(' ')}>{teamStats.hp.toLocaleString()}</span>
+                </div>
+                <div className={styles.teamStatRow}>
+                  <span className={[styles.teamStatDot, styles.teamStatDotSpd].join(' ')} />
+                  <span className={styles.teamStatLbl}>SPD</span>
+                  <span className={[styles.teamStatVal, styles.teamStatValSpd].join(' ')}>{teamStats.spd.toLocaleString()}</span>
+                </div>
+                <div className={[styles.teamStatRow, styles.teamStatPowerRow].join(' ')}>
+                  <span className={[styles.teamStatDot, styles.teamStatDotPower].join(' ')} />
+                  <span className={[styles.teamStatLbl, styles.teamStatPowerLbl].join(' ')}>Power</span>
+                  <span className={[styles.teamStatVal, styles.teamStatValPower].join(' ')}>{teamStats.power.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {teamStats.synergies.length > 0 && (
+                <div className={styles.teamSynergies}>
+                  <span className={styles.teamSynHeader}>Synergies</span>
+                  <div className={styles.teamSynList}>
+                    {teamStats.synergies.map(([trait, count]) => (
+                      <span
+                        key={trait}
+                        className={[styles.teamSynBadge, count >= 4 ? styles.teamSynBadgeGold : count >= 3 ? styles.teamSynBadgeAlt : ''].filter(Boolean).join(' ')}
+                      >
+                        {trait}
+                        <span className={styles.teamSynCount}>×{count}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          </div>{/* ghostTeamBody */}
         </div>
 
         {/* Background picker */}
