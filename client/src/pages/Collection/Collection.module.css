@@ -1207,30 +1207,45 @@
   white-space: nowrap;
 }
 
-/* Drag scroll hint — fixed bar at bottom of screen while dragging */
-.dragScrollHint {
+/* ─── Drag tray — slides up from bottom when dragging a card ─────────────── */
+.dragTray {
   position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 990;
-  padding: 7px 18px;
-  border-radius: 999px;
-  background: rgba(10, 8, 20, 0.9);
-  border: 1px solid rgba(124,58,237,0.5);
-  color: rgba(167,139,250,0.9);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 12px 24px 16px;
+  background: rgba(7, 5, 18, 0.95);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(124,58,237,0.45);
+  box-shadow: 0 -6px 28px rgba(124,58,237,0.18);
   pointer-events: none;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 0 12px rgba(124,58,237,0.3);
-  animation: hint-fade-in 0.25s ease;
+  animation: drag-tray-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-@keyframes hint-fade-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+@keyframes drag-tray-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.dragTrayLabel {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(124,58,237,0.7);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dragTraySlots {
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
 }
 
 .empty {
