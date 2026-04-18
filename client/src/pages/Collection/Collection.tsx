@@ -142,6 +142,7 @@ export function Collection() {
   const editTeamIdsRef = useRef<(string | null)[]>([null, null, null, null, null]);
   const sourceSlotRef  = useRef<number | null>(null);
   const prevDragPosRef = useRef({ x: 0, y: 0 });
+  const prevSnapSlotRef = useRef<number | null>(null);
 
   usePackState();
 
@@ -179,6 +180,7 @@ export function Collection() {
   const [editBg, setEditBg]                   = useState('default');
   const [editTeamIds, setEditTeamIds]         = useState<(string | null)[]>([null,null,null,null,null]);
   const [dragCard, setDragCard]               = useState<UserCard | null>(null);
+  const [snapSlot, setSnapSlot]               = useState<number | null>(null);
   const [ghostCodeCopied, setGhostCodeCopied] = useState(false);
 
   // Close trait popover on outside click
@@ -211,37 +213,58 @@ export function Collection() {
       const dy = e.clientY - prevDragPosRef.current.y;
       prevDragPosRef.current = { x: e.clientX, y: e.clientY };
 
-      // Tilt from velocity
       const tiltY = Math.max(-22, Math.min(22, dx * 2.5));
       const tiltX = Math.max(-16, Math.min(16, -dy * 1.8));
 
-      float.style.left = `${e.clientX}px`;
-      float.style.top  = `${e.clientY}px`;
-      float.style.setProperty('--tilt-x', `${tiltX}deg`);
-      float.style.setProperty('--tilt-y', `${tiltY}deg`);
+      const ids      = editTeamIdsRef.current;
+      const clsDrop  = styles.ghostSlotDropTarget!;
+      const clsHov   = styles.ghostSlotHovered!;
 
-      // Imperatively glow/unglow slots (avoids re-render on every frame)
-      const ids = editTeamIdsRef.current;
-      const clsDrop    = styles.ghostSlotDropTarget!;
-      const clsHovered = styles.ghostSlotHovered!;
+      // Find which empty slot (if any) the pointer is over
+      let overSlot: number | null = null;
+      slotRefs.current.forEach((ref, i) => {
+        if (!ref || ids[i]) return;
+        const r = ref.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) overSlot = i;
+      });
+
+      if (overSlot !== null) {
+        // Snap float to slot center — clear tilt
+        const slotEl = slotRefs.current[overSlot];
+        if (slotEl) {
+          const r = slotEl.getBoundingClientRect();
+          float.style.left = `${r.left + r.width  / 2}px`;
+          float.style.top  = `${r.top  + r.height / 2}px`;
+        }
+        float.style.setProperty('--tilt-x', '0deg');
+        float.style.setProperty('--tilt-y', '0deg');
+      } else {
+        // Free-move with tilt
+        float.style.left = `${e.clientX}px`;
+        float.style.top  = `${e.clientY}px`;
+        float.style.setProperty('--tilt-x', `${tiltX}deg`);
+        float.style.setProperty('--tilt-y', `${tiltY}deg`);
+      }
+
+      // Trigger mini-card re-render only on snap state change (not every frame)
+      if (overSlot !== prevSnapSlotRef.current) {
+        prevSnapSlotRef.current = overSlot;
+        setSnapSlot(overSlot);
+      }
+
+      // Imperatively glow/unglow slots
       slotRefs.current.forEach((ref, i) => {
         if (!ref) return;
-        if (ids[i]) {
-          ref.classList.remove(clsDrop, clsHovered);
-          return;
-        }
+        if (ids[i]) { ref.classList.remove(clsDrop, clsHov); return; }
         ref.classList.add(clsDrop);
-        const r = ref.getBoundingClientRect();
-        const over = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-        ref.classList.toggle(clsHovered, over);
+        ref.classList.toggle(clsHov, i === overSlot);
       });
     }
 
     function onUp(e: PointerEvent) {
-      // Clean up slot classes
-      const clsDrop    = styles.ghostSlotDropTarget!;
-      const clsHovered = styles.ghostSlotHovered!;
-      slotRefs.current.forEach(ref => ref?.classList.remove(clsDrop, clsHovered));
+      const clsDrop = styles.ghostSlotDropTarget!;
+      const clsHov  = styles.ghostSlotHovered!;
+      slotRefs.current.forEach(ref => ref?.classList.remove(clsDrop, clsHov));
 
       const uc = dragCardRef.current;
       if (!uc) return;
@@ -254,16 +277,16 @@ export function Collection() {
         if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) droppedSlot = i;
       });
 
+      // Dropped on a slot → fill it. Otherwise slot-sourced cards stay removed (= removed from team).
       if (droppedSlot !== null) {
         const next = [...ids]; next[droppedSlot] = uc.id; setEditTeamIds(next);
-      } else if (sourceSlotRef.current !== null) {
-        // Dropped outside valid target — restore to original slot
-        const next = [...ids]; next[sourceSlotRef.current] = uc.id; setEditTeamIds(next);
       }
 
-      dragCardRef.current  = null;
+      dragCardRef.current   = null;
       sourceSlotRef.current = null;
+      prevSnapSlotRef.current = null;
       setDragCard(null);
+      setSnapSlot(null);
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
     }
@@ -1066,8 +1089,23 @@ export function Collection() {
 
       {/* Floating drag ghost */}
       {dragCard && (
-        <div ref={floatRef} className={styles.dragFloat} aria-hidden="true">
-          <Card userCard={dragCard} tilt={false} />
+        <div
+          ref={floatRef}
+          className={[styles.dragFloat, snapSlot !== null ? styles.dragFloatSnapped : ''].filter(Boolean).join(' ')}
+          aria-hidden="true"
+        >
+          {snapSlot !== null ? (
+            <div className={styles.dragFloatMini}>
+              {dragCard.card.wikiThumbUrl
+                ? <img src={dragCard.card.wikiThumbUrl} alt={dragCard.card.wikiTitle} className={styles.dragFloatMiniImg} />
+                : <div className={styles.dragFloatMiniFallback}>{dragCard.card.wikiTitle.slice(0, 2)}</div>}
+              <span className={styles.dragFloatMiniRarity} style={{ color: `var(--rarity-${dragCard.card.rarity.toLowerCase()})` }}>
+                {dragCard.card.rarity}
+              </span>
+            </div>
+          ) : (
+            <Card userCard={dragCard} tilt={false} />
+          )}
         </div>
       )}
     </div>
