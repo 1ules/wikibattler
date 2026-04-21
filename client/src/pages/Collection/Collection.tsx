@@ -212,6 +212,7 @@ export function Collection() {
   const profileSectionRef = useRef<HTMLElement>(null);
   const dragInitPos    = useRef({ x: 0, y: 0 });
   const slotRefs       = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
+  const slotRectsRef   = useRef<(DOMRect | null)[]>([null, null, null, null, null]);
   const editTeamIdsRef = useRef<(string | null)[]>([null, null, null, null, null]);
   const sourceSlotRef  = useRef<number | null>(null);
   const prevDragPosRef = useRef({ x: 0, y: 0 });
@@ -265,11 +266,11 @@ export function Collection() {
     return () => { document.body.style.overflow = ''; };
   }, [selectedCard]);
 
-  // Set float to initial cursor position synchronously — avoids React style prop overriding imperative left/top
+  // Set float to initial cursor position synchronously via transform custom props (no layout trigger)
   useLayoutEffect(() => {
     if (dragCard && floatRef.current) {
-      floatRef.current.style.left = `${dragInitPos.current.x}px`;
-      floatRef.current.style.top  = `${dragInitPos.current.y}px`;
+      floatRef.current.style.setProperty('--drag-x', `${dragInitPos.current.x}px`);
+      floatRef.current.style.setProperty('--drag-y', `${dragInitPos.current.y}px`);
     }
   }, [dragCard]);
 
@@ -310,25 +311,24 @@ export function Collection() {
       const clsDrop = styles.ghostSlotDropTarget!;
       const clsHov  = styles.ghostSlotHovered!;
 
+      // Use cached rects — no getBoundingClientRect on the hot path
       let overSlot: number | null = null;
-      slotRefs.current.forEach((ref, i) => {
-        if (!ref || ids[i]) return;
-        const r = ref.getBoundingClientRect();
+      slotRectsRef.current.forEach((r, i) => {
+        if (!r || ids[i]) return;
         if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) overSlot = i;
       });
 
       if (overSlot !== null) {
-        const slotEl = slotRefs.current[overSlot];
-        if (slotEl) {
-          const r = slotEl.getBoundingClientRect();
-          float.style.left = `${r.left + r.width  / 2}px`;
-          float.style.top  = `${r.top  + r.height / 2}px`;
+        const r = slotRectsRef.current[overSlot];
+        if (r) {
+          float.style.setProperty('--drag-x', `${r.left + r.width  / 2}px`);
+          float.style.setProperty('--drag-y', `${r.top  + r.height / 2}px`);
         }
         float.style.setProperty('--tilt-x', '0deg');
         float.style.setProperty('--tilt-y', '0deg');
       } else {
-        float.style.left = `${e.clientX}px`;
-        float.style.top  = `${e.clientY}px`;
+        float.style.setProperty('--drag-x', `${e.clientX}px`);
+        float.style.setProperty('--drag-y', `${e.clientY}px`);
         float.style.setProperty('--tilt-x', `${tiltX}deg`);
         float.style.setProperty('--tilt-y', `${tiltY}deg`);
       }
@@ -356,9 +356,8 @@ export function Collection() {
 
       const ids = editTeamIdsRef.current;
       let droppedSlot: number | null = null;
-      slotRefs.current.forEach((ref, i) => {
-        if (!ref || ids[i]) return;
-        const r = ref.getBoundingClientRect();
+      slotRectsRef.current.forEach((r, i) => {
+        if (!r || ids[i]) return;
         if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) droppedSlot = i;
       });
 
@@ -369,6 +368,7 @@ export function Collection() {
       dragCardRef.current     = null;
       sourceSlotRef.current   = null;
       prevSnapSlotRef.current = null;
+      slotRectsRef.current    = [null, null, null, null, null];
       setDragCard(null);
       setSnapSlot(null);
       document.body.style.userSelect = '';
@@ -394,6 +394,7 @@ export function Collection() {
     if (fromSlot !== null) {
       const next = [...editTeamIds]; next[fromSlot] = null; setEditTeamIds(next);
     }
+    slotRectsRef.current = slotRefs.current.map(el => el?.getBoundingClientRect() ?? null);
     setDragCard(uc);
   }
 

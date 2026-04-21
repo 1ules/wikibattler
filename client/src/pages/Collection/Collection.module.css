@@ -1114,7 +1114,7 @@
 
 .gridCardWrap { position: relative; }
 
-.gridCardDraggable { cursor: grab; }
+.gridCardDraggable { cursor: grab; touch-action: none; }
 .gridCardDraggable:active { cursor: grabbing; }
 .gridCardDraggable:hover::after {
   content: '';
@@ -1132,7 +1132,7 @@
 }
 
 /* The floating card that follows the cursor.
-   left/top are set imperatively; tilt vars are also set imperatively. */
+   Position driven entirely via CSS custom props --drag-x/--drag-y (compositor-only, no layout). */
 .dragFloat {
   position: fixed;
   width: 160px;
@@ -1141,12 +1141,13 @@
   left: 0;
   top:  0;
   transform:
+    translate(var(--drag-x, 0px), var(--drag-y, 0px))
     translate(-50%, -55%)
     perspective(700px)
     rotateX(var(--tilt-x, 0deg))
     rotateY(var(--tilt-y, 0deg))
     scale(1.1);
-  will-change: left, top, transform;
+  will-change: transform;
   filter: drop-shadow(0 28px 50px rgba(0, 0, 0, 0.85));
   transition: transform 0.07s ease-out;
 }
@@ -1157,15 +1158,16 @@
   height: 72px;
   overflow: hidden;
   border-radius: var(--radius-md);
-  transform: translate(-50%, -50%) scale(1.08) !important;
+  transform:
+    translate(var(--drag-x, 0px), var(--drag-y, 0px))
+    translate(-50%, -50%)
+    scale(1.08) !important;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.8)) !important;
   transition:
-    width   0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
-    height  0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
-    left    0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
-    top     0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+    width     0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+    height    0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
     transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
-    filter  0.14s ease !important;
+    filter    0.14s ease !important;
 }
 
 /* Mini slot preview rendered inside the float when snapped */
@@ -1995,4 +1997,17 @@
   .grid, .loadingGrid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   }
+}
+
+/* ─── Mobile performance: strip expensive GPU ops ────────────────────────── */
+@media (max-width: 768px) {
+  /* Remove filter animations from pack rings — filter forces full recomposite each frame */
+  .ringWrapReady { animation: none; }
+  .ringWrapFull  { animation: none; }
+
+  /* Slot pulse animation uses box-shadow which repaints — disable during drag */
+  .ghostSlotDropTarget { animation: none; }
+
+  /* backdrop-filter: blur on the modal overlay is extremely expensive on mobile */
+  .modalOverlay { backdrop-filter: none; }
 }

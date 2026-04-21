@@ -41,6 +41,8 @@ export function Card({
   const { card, isFoil } = userCard;
   const rarityInfo = RARITY_DISPLAY[card.rarity];
   const cardRef = useRef<HTMLElement>(null);
+  const rafRef  = useRef<number | null>(null);
+  const rectRef = useRef<DOMRect | null>(null);
 
   const foilClass =
     isFoil && card.rarity === 'MR'  ? styles['foil-mr']  :
@@ -59,7 +61,7 @@ export function Card({
   function applyTilt(clientX: number, clientY: number) {
     const el = cardRef.current;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
+    const rect = rectRef.current ?? el.getBoundingClientRect();
     const dx = (clientX - (rect.left + rect.width  / 2)) / (rect.width  / 2);
     const dy = (clientY - (rect.top  + rect.height / 2)) / (rect.height / 2);
     el.style.setProperty('--tilt-x', `${(-dy * 14).toFixed(1)}deg`);
@@ -89,8 +91,12 @@ export function Card({
     let touchStart: { x: number; y: number } | null = null;
 
     function onTouchStart(e: TouchEvent) {
+      if (!el) return;
       const t = e.touches[0];
-      if (t) touchStart = { x: t.clientX, y: t.clientY };
+      if (!t) return;
+      touchStart = { x: t.clientX, y: t.clientY };
+      rectRef.current = el.getBoundingClientRect(); // cache once — avoids layout on every move
+      el.style.willChange = 'transform';            // promote to GPU layer for this interaction
     }
 
     function onTouchMove(e: TouchEvent) {
@@ -101,12 +107,20 @@ export function Card({
       const dy = Math.abs(t.clientY - touchStart.y);
       if (dx > dy) {
         e.preventDefault();
-        applyTilt(t.clientX, t.clientY);
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+        const cx = t.clientX, cy = t.clientY;
+        rafRef.current = requestAnimationFrame(() => {
+          applyTilt(cx, cy);
+          rafRef.current = null;
+        });
       }
     }
 
     function onTouchEnd() {
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
       touchStart = null;
+      rectRef.current = null;
+      if (el) el.style.willChange = 'auto'; // release GPU layer
       resetTilt();
     }
 
