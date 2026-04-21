@@ -212,7 +212,6 @@ export function Collection() {
   const profileSectionRef = useRef<HTMLElement>(null);
   const dragInitPos    = useRef({ x: 0, y: 0 });
   const slotRefs       = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
-  const slotRectsRef   = useRef<(DOMRect | null)[]>([null, null, null, null, null]);
   const editTeamIdsRef = useRef<(string | null)[]>([null, null, null, null, null]);
   const sourceSlotRef  = useRef<number | null>(null);
   const prevDragPosRef = useRef({ x: 0, y: 0 });
@@ -307,23 +306,36 @@ export function Collection() {
       const tiltY = Math.max(-22, Math.min(22, dx * 2.5));
       const tiltX = Math.max(-16, Math.min(16, -dy * 1.8));
 
-      const ids     = editTeamIdsRef.current;
-      const clsDrop = styles.ghostSlotDropTarget!;
-      const clsHov  = styles.ghostSlotHovered!;
+      const dragCurrent = dragCardRef.current;
+      if (!dragCurrent) return;
 
-      // Use cached rects — no getBoundingClientRect on the hot path
+      const ids            = editTeamIdsRef.current;
+      const dragId         = dragCurrent.id;
+      const clsDrop        = styles.ghostSlotDropTarget!;
+      const clsHov         = styles.ghostSlotHovered!;
+      // Prevent a card already in a slot from being dropped into another slot
+      const alreadySlotted = ids.some(id => id === dragId);
+
+      // Fresh getBCR on each move — layout is stable during drag (only CSS custom props change)
+      // Cached rects break on mobile when the browser chrome (address bar) appears/disappears,
+      // invalidating y-coordinates for the top slots.
       let overSlot: number | null = null;
-      slotRectsRef.current.forEach((r, i) => {
-        if (!r || ids[i]) return;
-        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) overSlot = i;
-      });
+      let overRect: DOMRect | null = null;
 
-      if (overSlot !== null) {
-        const r = slotRectsRef.current[overSlot];
-        if (r) {
-          float.style.setProperty('--drag-x', `${r.left + r.width  / 2}px`);
-          float.style.setProperty('--drag-y', `${r.top  + r.height / 2}px`);
-        }
+      if (!alreadySlotted) {
+        slotRefs.current.forEach((ref, i) => {
+          if (!ref || ids[i]) return;
+          const r = ref.getBoundingClientRect();
+          if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+            overSlot = i;
+            overRect = r;
+          }
+        });
+      }
+
+      if (overSlot !== null && overRect !== null) {
+        float.style.setProperty('--drag-x', `${(overRect as DOMRect).left + (overRect as DOMRect).width  / 2}px`);
+        float.style.setProperty('--drag-y', `${(overRect as DOMRect).top  + (overRect as DOMRect).height / 2}px`);
         float.style.setProperty('--tilt-x', '0deg');
         float.style.setProperty('--tilt-y', '0deg');
       } else {
@@ -340,7 +352,7 @@ export function Collection() {
 
       slotRefs.current.forEach((ref, i) => {
         if (!ref) return;
-        if (ids[i]) { ref.classList.remove(clsDrop, clsHov); return; }
+        if (ids[i] || alreadySlotted) { ref.classList.remove(clsDrop, clsHov); return; }
         ref.classList.add(clsDrop);
         ref.classList.toggle(clsHov, i === overSlot);
       });
@@ -354,21 +366,26 @@ export function Collection() {
       const uc = dragCardRef.current;
       if (!uc) return;
 
-      const ids = editTeamIdsRef.current;
+      const ids            = editTeamIdsRef.current;
+      const dragId         = uc.id;
+      const alreadySlotted = ids.some(id => id === dragId);
+
       let droppedSlot: number | null = null;
-      slotRectsRef.current.forEach((r, i) => {
-        if (!r || ids[i]) return;
-        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) droppedSlot = i;
-      });
+      if (!alreadySlotted) {
+        slotRefs.current.forEach((ref, i) => {
+          if (!ref || ids[i]) return;
+          const r = ref.getBoundingClientRect();
+          if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) droppedSlot = i;
+        });
+      }
 
       if (droppedSlot !== null) {
-        const next = [...ids]; next[droppedSlot] = uc.id; setEditTeamIds(next);
+        const next = [...ids]; next[droppedSlot] = dragId; setEditTeamIds(next);
       }
 
       dragCardRef.current     = null;
       sourceSlotRef.current   = null;
       prevSnapSlotRef.current = null;
-      slotRectsRef.current    = [null, null, null, null, null];
       setDragCard(null);
       setSnapSlot(null);
       document.body.style.userSelect = '';
@@ -392,9 +409,10 @@ export function Collection() {
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'grabbing';
     if (fromSlot !== null) {
-      const next = [...editTeamIds]; next[fromSlot] = null; setEditTeamIds(next);
+      const next = [...editTeamIds]; next[fromSlot] = null;
+      editTeamIdsRef.current = next; // sync immediately so first onMove sees cleared slot
+      setEditTeamIds(next);
     }
-    slotRectsRef.current = slotRefs.current.map(el => el?.getBoundingClientRect() ?? null);
     setDragCard(uc);
   }
 
