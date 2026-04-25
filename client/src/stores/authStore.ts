@@ -32,6 +32,6 @@ export const useAuthStore = create<AuthStore>()(
         set({ userId: null, isGuest: true, guestToken: null, isAuthenticated: false });
       },
     }),
-    { name: 'wb-auth', partialize: (s) => ({ userId: s.userId, isGuest: s.isGuest, guestToken: s.guestToken }) }
+    { name: 'wb-auth', partialize: (s) => ({ userId: s.userId, isGuest: s.isGuest, guestToken: s.guestToken, isAuthenticated: s.isAuthenticated }) }
   )
 );

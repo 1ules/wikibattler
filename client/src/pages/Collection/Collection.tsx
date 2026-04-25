@@ -1115,31 +1115,39 @@ export function Collection() {
                 </div>
               </div>
 
-              {/* Synergies to the right */}
-              {teamStats.synergies.length > 0 && (
-                <div className={styles.teamSynergies}>
-                  <span className={styles.teamSynHeader}>Synergies</span>
-                  <div className={styles.teamSynList}>
-                    {teamStats.synergies.map(syn => {
-                      const pct = Math.round((syn.statMultiplier - 1) * 100);
-                      const tier = syn.statMultiplier >= 1.2 ? 'gold' : syn.statMultiplier >= 1.1 ? 'alt' : '';
-                      return (
-                        <span
-                          key={syn.qid}
-                          className={[
-                            styles.teamSynBadge,
-                            tier === 'gold' ? styles.teamSynBadgeGold : tier === 'alt' ? styles.teamSynBadgeAlt : '',
-                          ].filter(Boolean).join(' ')}
-                          title={`${syn.sharedCount}/${syn.teamSize} cards · +${pct}% stats`}
-                        >
-                          {syn.label}
-                          <span className={styles.teamSynCount}>+{pct}%</span>
-                        </span>
-                      );
-                    })}
+              {/* Synergies to the right — capped so they never expand the section */}
+              {teamStats.synergies.length > 0 && (() => {
+                const MAX_SYN = 6;
+                const visible  = teamStats.synergies.slice(0, MAX_SYN);
+                const overflow = teamStats.synergies.length - visible.length;
+                return (
+                  <div className={styles.teamSynergies}>
+                    <span className={styles.teamSynHeader}>Synergies</span>
+                    <div className={styles.teamSynList}>
+                      {visible.map(syn => {
+                        const pct  = Math.round((syn.statMultiplier - 1) * 100);
+                        const tier = syn.statMultiplier >= 1.2 ? 'gold' : syn.statMultiplier >= 1.1 ? 'alt' : '';
+                        return (
+                          <span
+                            key={syn.qid}
+                            className={[
+                              styles.teamSynBadge,
+                              tier === 'gold' ? styles.teamSynBadgeGold : tier === 'alt' ? styles.teamSynBadgeAlt : '',
+                            ].filter(Boolean).join(' ')}
+                            title={`${syn.sharedCount}/${syn.teamSize} cards · +${pct}% stats`}
+                          >
+                            {syn.label}
+                            <span className={styles.teamSynCount}>+{pct}%</span>
+                          </span>
+                        );
+                      })}
+                      {overflow > 0 && (
+                        <span className={styles.teamSynOverflow}>+{overflow}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
           </div>{/* ghostTeamBody */}

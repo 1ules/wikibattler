@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore.js';
 import { usePackState } from '../../api/usePacks.js';
@@ -9,7 +10,15 @@ function PackStateSync() {
 }
 
 export function AppShell() {
-  const { isGuest, isAuthenticated } = useAuthStore();
+  const { isGuest, isAuthenticated, clearAuth } = useAuthStore();
+
+  // When the refresh cookie expires the API interceptor dispatches this event.
+  // Clear persisted auth so the user isn't stuck in a broken authenticated state.
+  useEffect(() => {
+    const handler = () => clearAuth();
+    window.addEventListener('auth:expired', handler);
+    return () => window.removeEventListener('auth:expired', handler);
+  }, [clearAuth]);
 
   return (
     <div className={styles.shell}>

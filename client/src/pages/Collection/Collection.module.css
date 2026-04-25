@@ -694,11 +694,14 @@
 
 /* ─── Synergies column ───────────────────────────────────────────────────── */
 .teamSynergies {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
   border-left: 1px solid rgba(255,255,255,0.08);
   padding-left: var(--space-4);
+  overflow: hidden;
 }
 
 .teamSynHeader {
@@ -707,13 +710,30 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 .teamSynList {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  max-width: 260px;
+  /* No max-width — fills available space so more badges fit per row */
+  /* max-height caps at 2 badge rows as a hard safety net */
+  overflow: hidden;
+  max-height: 42px;
+}
+
+.teamSynOverflow {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  white-space: nowrap;
 }
 
 .teamSynBadge {
