@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useCollection } from '../../api/useCards.js';
 import {
   ACHIEVEMENTS, computeStats, checkCondition, getProgress,
@@ -28,24 +28,11 @@ export default function Achievements() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
   const setHasNewAchievements = useNotificationStore(s => s.setHasNewAchievements);
 
-  // New achievements (recently unlocked, not yet viewed)
-  const [newAchIds, setNewAchIds] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('wb-new-achievements') ?? '[]') as string[]); }
-    catch { return new Set(); }
-  });
-
   // Claimed achievements (rewards applied)
   const [claimedIds, setClaimedIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('wb-claimed-achievements') ?? '[]') as string[]); }
     catch { return new Set(); }
   });
-
-  // Clear new-achievement notification when user visits this page
-  useEffect(() => {
-    localStorage.removeItem('wb-new-achievements');
-    setHasNewAchievements(false);
-    // Don't clear newAchIds state — still want red dots on individual cards this visit
-  }, [setHasNewAchievements]);
 
   const stats = useMemo(() => {
     const cards = (collectionData?.data ?? []).map((uc: { card: { rarity: string; tags?: string[] }; isFoil: boolean }) => ({
@@ -82,11 +69,10 @@ export default function Achievements() {
       const next = new Set(prev);
       next.add(id);
       localStorage.setItem('wb-claimed-achievements', JSON.stringify([...next]));
-      return next;
-    });
-    setNewAchIds(prev => {
-      const next = new Set(prev);
-      next.delete(id);
+      // Clear nav dot if no more unclaimed unlocked achievements remain
+      const unlocked: string[] = JSON.parse(localStorage.getItem('wb-unlocked-achievements') ?? '[]');
+      const anyUnclaimed = unlocked.some(uid => !next.has(uid));
+      if (!anyUnclaimed) setHasNewAchievements(false);
       return next;
     });
   }
@@ -133,9 +119,9 @@ export default function Achievements() {
           <div className={styles.empty}>No achievements match your filters.</div>
         )}
         {filtered.map(ach => {
-          const done = checkCondition(ach.condition, stats);
+          const done    = checkCondition(ach.condition, stats);
           const claimed = claimedIds.has(ach.id);
-          const isNew = newAchIds.has(ach.id);
+          const isNew   = done && !claimed;
           const { current, target } = getProgress(ach, stats);
           const fillPct = Math.min(100, Math.round((current / target) * 100));
 

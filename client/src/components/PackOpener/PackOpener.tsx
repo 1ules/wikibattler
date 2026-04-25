@@ -78,10 +78,8 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
   const [showReadyBurst, setShowReadyBurst] = useState(false);
   const [peakRarity, setPeakRarity]     = useState<string | null>(null);
   const [focusedCard, setFocusedCard]   = useState<UserCard | null>(null);
-  const [seenIds, setSeenIds]           = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('wb-seen-cards') ?? '[]') as string[]); }
-    catch { return new Set(); }
-  });
+  // Track which cards the user has clicked in this opener session
+  const [clickedIds, setClickedIds]     = useState<Set<string>>(new Set());
   const particleId    = useRef(0);
   const phaseTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -202,23 +200,16 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
     );
   }
 
-  function markCardSeen(id: string) {
-    setSeenIds(prev => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      localStorage.setItem('wb-seen-cards', JSON.stringify([...next]));
-      return next;
-    });
-  }
-
-  function markAllSeen() {
-    setSeenIds(prev => {
-      const next = new Set(prev);
-      for (const c of cards) next.add(c.id);
-      localStorage.setItem('wb-seen-cards', JSON.stringify([...next]));
-      return next;
-    });
+  function handleAddToCollection() {
+    // Cards NOT clicked in this session are still "new" — persist them for the collection view
+    const unclicked = cards.filter(c => !clickedIds.has(c.id)).map(c => c.id);
+    if (unclicked.length > 0) {
+      try {
+        const prev: string[] = JSON.parse(localStorage.getItem('wb-new-cards') ?? '[]');
+        localStorage.setItem('wb-new-cards', JSON.stringify([...new Set([...prev, ...unclicked])]));
+      } catch { /* ignore */ }
+    }
+    onClose();
   }
 
   function handlePackClick() {
@@ -364,7 +355,7 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
                   revealed[i] && phase === 'done' ? styles.cardSlotClickable : '',
                 ].join(' ')}
               >
-                {revealed[i] && !seenIds.has(uc.id) && phase === 'done' && (
+                {revealed[i] && !clickedIds.has(uc.id) && phase === 'done' && (
                   <span className={styles.newDot} aria-hidden="true" />
                 )}
                 {revealed[i] && (
@@ -372,7 +363,10 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
                     userCard={uc}
                     revealing={phase === 'revealing'}
                     tilt={phase === 'done'}
-                    onClick={phase === 'done' ? () => { setFocusedCard(uc); markCardSeen(uc.id); } : undefined}
+                    onClick={phase === 'done' ? () => {
+                      setFocusedCard(uc);
+                      setClickedIds(prev => new Set([...prev, uc.id]));
+                    } : undefined}
                   />
                 )}
               </div>
@@ -381,7 +375,7 @@ export function PackOpener({ cards, isCharging, onClose }: PackOpenerProps) {
         )}
 
         {phase === 'done' && (
-          <button className={styles.continueBtn} onClick={() => { markAllSeen(); onClose(); }}>
+          <button className={styles.continueBtn} onClick={handleAddToCollection}>
             Add to Collection
           </button>
         )}

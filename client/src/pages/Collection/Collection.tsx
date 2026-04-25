@@ -546,17 +546,18 @@ export function Collection() {
   const [toastQueue, setToastQueue] = useState<Achievement[]>([]);
   const setHasNewAchievements = useNotificationStore(s => s.setHasNewAchievements);
 
-  const [seenCardIds, setSeenCardIds] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('wb-seen-cards') ?? '[]') as string[]); }
+  // Cards that were recently added from a pack and haven't been clicked yet
+  const [newCardIds, setNewCardIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('wb-new-cards') ?? '[]') as string[]); }
     catch { return new Set(); }
   });
 
-  function markCardSeen(id: string) {
-    setSeenCardIds(prev => {
-      if (prev.has(id)) return prev;
+  function removeNewCard(id: string) {
+    setNewCardIds(prev => {
+      if (!prev.has(id)) return prev;
       const next = new Set(prev);
-      next.add(id);
-      localStorage.setItem('wb-seen-cards', JSON.stringify([...next]));
+      next.delete(id);
+      localStorage.setItem('wb-new-cards', JSON.stringify([...next]));
       return next;
     });
   }
@@ -572,10 +573,6 @@ export function Collection() {
     }
     if (newlyUnlocked.length > 0) {
       localStorage.setItem('wb-unlocked-achievements', JSON.stringify([...seen]));
-      // Track new achievements for red dot on nav + achievements page
-      const prevNew: string[] = JSON.parse(localStorage.getItem('wb-new-achievements') ?? '[]');
-      const updatedNew = [...new Set([...prevNew, ...newlyUnlocked.map(a => a.id)])];
-      localStorage.setItem('wb-new-achievements', JSON.stringify(updatedNew));
       setHasNewAchievements(true);
       setToastQueue(prev => [...prev, ...newlyUnlocked].slice(-4));
     }
@@ -774,6 +771,10 @@ export function Collection() {
     setPackOpenerOpen(false);
     setPendingCards(null);
     setPackCharging(false);
+    // PackOpener may have written unclicked card IDs to wb-new-cards — re-read so dots appear
+    try {
+      setNewCardIds(new Set(JSON.parse(localStorage.getItem('wb-new-cards') ?? '[]') as string[]));
+    } catch { /* ignore */ }
     void queryClient.invalidateQueries({ queryKey: ['cards'] });
   }
 
@@ -1437,7 +1438,7 @@ export function Collection() {
         <div className={[styles.grid, isEditing ? styles.gridDragMode : ''].filter(Boolean).join(' ')}>
           {filteredCollection.map((uc) => {
             const beingDragged = dragCard?.id === uc.id;
-            const isNew = !seenCardIds.has(uc.id);
+            const isNew = newCardIds.has(uc.id);
             return (
               <div
                 key={uc.id}
@@ -1448,7 +1449,7 @@ export function Collection() {
                 <Card
                   userCard={uc}
                   tilt={!isEditing}
-                  onClick={isEditing ? undefined : () => { markCardSeen(uc.id); setSelectedCard(uc); }}
+                  onClick={isEditing ? undefined : () => { removeNewCard(uc.id); setSelectedCard(uc); }}
                   style={beingDragged ? { opacity: 0.25, pointerEvents: 'none' } : undefined}
                 />
               </div>
