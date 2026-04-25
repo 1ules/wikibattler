@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore.js';
 import { usePackState } from '../../api/usePacks.js';
+import { useNotificationStore } from '../../stores/notificationStore.js';
 import styles from './AppShell.module.css';
 
 function PackStateSync() {
@@ -11,6 +12,7 @@ function PackStateSync() {
 
 export function AppShell() {
   const { isGuest, isAuthenticated, clearAuth } = useAuthStore();
+  const hasNewAchievements = useNotificationStore(s => s.hasNewAchievements);
 
   // When the refresh cookie expires the API interceptor dispatches this event.
   // Clear persisted auth so the user isn't stuck in a broken authenticated state.
@@ -29,7 +31,10 @@ export function AppShell() {
         <nav className={styles.nav}>
           <NavLink to="/"            className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Home</NavLink>
           <NavLink to="/collection"  className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Collection</NavLink>
-          <NavLink to="/achievements" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>Achievements</NavLink>
+          <NavLink to="/achievements" className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>
+            Achievements
+            {hasNewAchievements && <span className={styles.navDot} aria-hidden="true" />}
+          </NavLink>
           <NavLink to="/battle"      className={({ isActive }) => [styles.navLink, isActive ? styles.active : ''].join(' ')}>
             Battle <span className={styles.p2badge}>P2</span>
           </NavLink>

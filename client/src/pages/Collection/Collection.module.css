@@ -1134,6 +1134,25 @@
 
 .gridCardWrap { position: relative; }
 
+.newDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.7);
+  z-index: 2;
+  pointer-events: none;
+  animation: dot-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+  50%       { box-shadow: 0 0 0 5px rgba(239,68,68,0); }
+}
+
 .gridCardDraggable { cursor: grab; touch-action: none; }
 .gridCardDraggable:active { cursor: grabbing; }
 .gridCardDraggable:hover::after {

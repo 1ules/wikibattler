@@ -87,6 +87,19 @@
   background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
 }
 
+/* ─── Nav notification dot ──────────────────────────────────────────────────── */
+.navDot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1.5px solid rgba(7, 9, 15, 0.9);
+  pointer-events: none;
+}
+
 /* ─── Phase 2 badge ─────────────────────────────────────────────────────────── */
 .p2badge {
   display: inline-block;

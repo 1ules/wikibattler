@@ -12,6 +12,7 @@ import type { UserCard, ApiResponse } from '@wikibattler/shared';
 import type { QidNode } from '@wikibattler/shared';
 import { PITY_SR_THRESHOLD, PITY_UR_THRESHOLD, QID_BLOCKLIST, MAX_STORED_PACKS, PACK_COOLDOWN_SECONDS, evaluateTeam, calculateCP, RARITY_DISPLAY } from '@wikibattler/shared';
 import { ACHIEVEMENTS, computeStats, checkCondition, type Achievement } from '../../utils/achievements.js';
+import { useNotificationStore } from '../../stores/notificationStore.js';
 import styles from './Collection.module.css';
 
 const ALL_RARITIES = ['C', 'UC', 'R', 'SR', 'SSR', 'UR', 'MR'] as const;
@@ -516,20 +517,15 @@ export function Collection() {
   }, [collection?.data]);
 
   const unlockedRewards = useMemo(() => {
-    const titles    = new Set<string>(['wanderer']);
-    const subtitles = new Set<string>(['starting-out']);
-    const bgs       = new Set<string>(['default', 'ocean', 'ember', 'forest', 'cosmic']);
-    for (const ach of ACHIEVEMENTS) {
-      if (!checkCondition(ach.condition, achievementStats)) continue;
-      if (ach.reward.title)      titles.add(ach.reward.title.text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
-      if (ach.reward.subtitle)   subtitles.add(ach.reward.subtitle.text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
-      if (ach.reward.background) bgs.add(ach.reward.background.id);
-    }
-    // match by title id directly
+    // Only grant rewards for achievements that have been explicitly claimed
+    const claimed = new Set<string>(
+      JSON.parse(localStorage.getItem('wb-claimed-achievements') ?? '[]') as string[]
+    );
     const titleIds    = new Set<string>(['wanderer']);
     const subtitleIds = new Set<string>(['starting-out']);
+    const bgIds       = new Set<string>(['default', 'ocean', 'ember', 'forest', 'cosmic']);
     for (const ach of ACHIEVEMENTS) {
-      if (!checkCondition(ach.condition, achievementStats)) continue;
+      if (!claimed.has(ach.id)) continue;
       if (ach.reward.title) {
         const match = TITLES.find(t => t.text === ach.reward.title!.text);
         if (match) titleIds.add(match.id);
@@ -538,8 +534,9 @@ export function Collection() {
         const match = SUBTITLES.find(t => t.text === ach.reward.subtitle!.text);
         if (match) subtitleIds.add(match.id);
       }
+      if (ach.reward.background) bgIds.add(ach.reward.background.id);
     }
-    return { titleIds, subtitleIds, bgIds: bgs };
+    return { titleIds, subtitleIds, bgIds };
   }, [achievementStats]);
 
   const unlockedTitleIds    = unlockedRewards.titleIds;
@@ -547,6 +544,22 @@ export function Collection() {
   const unlockedBgIds       = unlockedRewards.bgIds;
 
   const [toastQueue, setToastQueue] = useState<Achievement[]>([]);
+  const setHasNewAchievements = useNotificationStore(s => s.setHasNewAchievements);
+
+  const [seenCardIds, setSeenCardIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('wb-seen-cards') ?? '[]') as string[]); }
+    catch { return new Set(); }
+  });
+
+  function markCardSeen(id: string) {
+    setSeenCardIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem('wb-seen-cards', JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   useEffect(() => {
     const seen = new Set<string>(JSON.parse(localStorage.getItem('wb-unlocked-achievements') ?? '[]'));
@@ -559,9 +572,14 @@ export function Collection() {
     }
     if (newlyUnlocked.length > 0) {
       localStorage.setItem('wb-unlocked-achievements', JSON.stringify([...seen]));
+      // Track new achievements for red dot on nav + achievements page
+      const prevNew: string[] = JSON.parse(localStorage.getItem('wb-new-achievements') ?? '[]');
+      const updatedNew = [...new Set([...prevNew, ...newlyUnlocked.map(a => a.id)])];
+      localStorage.setItem('wb-new-achievements', JSON.stringify(updatedNew));
+      setHasNewAchievements(true);
       setToastQueue(prev => [...prev, ...newlyUnlocked].slice(-4));
     }
-  }, [achievementStats]);
+  }, [achievementStats, setHasNewAchievements]);
 
   const dismissToast = useCallback((id: string) => {
     setToastQueue(prev => prev.filter(a => a.id !== id));
@@ -1419,16 +1437,18 @@ export function Collection() {
         <div className={[styles.grid, isEditing ? styles.gridDragMode : ''].filter(Boolean).join(' ')}>
           {filteredCollection.map((uc) => {
             const beingDragged = dragCard?.id === uc.id;
+            const isNew = !seenCardIds.has(uc.id);
             return (
               <div
                 key={uc.id}
                 className={[styles.gridCardWrap, isEditing ? styles.gridCardDraggable : ''].filter(Boolean).join(' ')}
                 onPointerDown={isEditing ? e => startDrag(uc, e, null) : undefined}
               >
+                {isNew && !isEditing && <span className={styles.newDot} aria-hidden="true" />}
                 <Card
                   userCard={uc}
                   tilt={!isEditing}
-                  onClick={isEditing ? undefined : () => setSelectedCard(uc)}
+                  onClick={isEditing ? undefined : () => { markCardSeen(uc.id); setSelectedCard(uc); }}
                   style={beingDragged ? { opacity: 0.25, pointerEvents: 'none' } : undefined}
                 />
               </div>

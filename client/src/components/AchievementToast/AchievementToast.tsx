@@ -43,12 +43,13 @@ export function AchievementToast({ achievements, onDismiss }: Props) {
 
   useEffect(() => {
     setItems(prev => {
-      const existing = new Set(prev.map(i => i.id));
-      const next = [...prev];
+      const inProp = new Set(achievements.map(a => a.id));
+      const kept = prev.filter(i => inProp.has(i.id));
+      const existingIds = new Set(kept.map(i => i.id));
       for (const a of achievements) {
-        if (!existing.has(a.id)) next.push({ ach: a, id: a.id, progress: 100 });
+        if (!existingIds.has(a.id)) kept.push({ ach: a, id: a.id, progress: 100 });
       }
-      return next.slice(-4);
+      return kept.slice(-4);
     });
   }, [achievements]);
 

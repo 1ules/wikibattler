@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useCollection } from '../../api/useCards.js';
 import {
   ACHIEVEMENTS, computeStats, checkCondition, getProgress,
   type AchievementCategory, type AchievementTier,
 } from '../../utils/achievements.js';
+import { useNotificationStore } from '../../stores/notificationStore.js';
 import styles from './Achievements.module.css';
 
 const CATEGORY_LABELS: Record<AchievementCategory | 'all', string> = {
@@ -25,6 +26,26 @@ export default function Achievements() {
   const { data: collectionData } = useCollection();
   const [catFilter, setCatFilter] = useState<AchievementCategory | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
+  const setHasNewAchievements = useNotificationStore(s => s.setHasNewAchievements);
+
+  // New achievements (recently unlocked, not yet viewed)
+  const [newAchIds, setNewAchIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('wb-new-achievements') ?? '[]') as string[]); }
+    catch { return new Set(); }
+  });
+
+  // Claimed achievements (rewards applied)
+  const [claimedIds, setClaimedIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('wb-claimed-achievements') ?? '[]') as string[]); }
+    catch { return new Set(); }
+  });
+
+  // Clear new-achievement notification when user visits this page
+  useEffect(() => {
+    localStorage.removeItem('wb-new-achievements');
+    setHasNewAchievements(false);
+    // Don't clear newAchIds state — still want red dots on individual cards this visit
+  }, [setHasNewAchievements]);
 
   const stats = useMemo(() => {
     const cards = (collectionData?.data ?? []).map((uc: { card: { rarity: string; tags?: string[] }; isFoil: boolean }) => ({
@@ -54,6 +75,21 @@ export default function Achievements() {
   );
 
   const pct = Math.round((unlockedCount / ACHIEVEMENTS.length) * 100);
+
+  function claimAchievement(id: string) {
+    setClaimedIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem('wb-claimed-achievements', JSON.stringify([...next]));
+      return next;
+    });
+    setNewAchIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
 
   return (
     <div className={styles.page}>
@@ -98,6 +134,8 @@ export default function Achievements() {
         )}
         {filtered.map(ach => {
           const done = checkCondition(ach.condition, stats);
+          const claimed = claimedIds.has(ach.id);
+          const isNew = newAchIds.has(ach.id);
           const { current, target } = getProgress(ach, stats);
           const fillPct = Math.min(100, Math.round((current / target) * 100));
 
@@ -107,13 +145,14 @@ export default function Achievements() {
               className={[styles.card, done ? styles.unlocked : styles.locked].join(' ')}
               data-tier={ach.tier}
             >
+              {isNew && <span className={styles.newDot} aria-hidden="true" />}
               <div className={styles.cardTop}>
                 <span className={styles.cardIcon}>{CATEGORY_ICONS[ach.category]}</span>
                 <div className={styles.cardMeta}>
                   <p className={styles.cardName}>{ach.name}</p>
                   <span className={styles.cardTier}>{TIER_ICONS[ach.tier]} {ach.tier}</span>
                 </div>
-                {done && <span className={styles.unlockedBadge}>✅</span>}
+                {done && claimed && <span className={styles.unlockedBadge}>✅</span>}
               </div>
 
               <p className={styles.cardDesc}>{ach.description}</p>
@@ -139,6 +178,15 @@ export default function Achievements() {
                   <span className={styles.rewardChip}><span>🖼️</span> BG: {ach.reward.background.label}</span>
                 )}
               </div>
+
+              {done && !claimed && (
+                <button className={styles.claimBtn} onClick={() => claimAchievement(ach.id)}>
+                  Claim Reward
+                </button>
+              )}
+              {done && claimed && (
+                <span className={styles.claimedLabel}>Reward claimed</span>
+              )}
             </div>
           );
         })}
